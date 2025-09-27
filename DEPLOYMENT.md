@@ -3,19 +3,32 @@
 ## Prezentare Generală
 Acest repository este un **template reutilizabil** pentru instalarea Traefik v3.2 pe servere multiple. Include scripturi de automatizare care validează și pregătesc mediul înainte de deployment.
 
-## ⚡ Quick Start (pentru utilizatori experimentați)
+## ⚡ Quick Start
 
+### Workflow Standard (Recomandat)
 ```bash
-# 1. Clonează template-ul
-git clone https://github.com/your-org/traefik-template.git traefik
-cd traefik
+# 1. Clonează repo-urile în locațiile standard
+git clone https://github.com/your-org/traefik-deploy.git /opt/traefik
+git clone https://github.com/your-org/traefik-configs.git /opt/traefik-configs
 
-# 2. Configurare
-cp .env.example .env
-nano .env  # Editează TOATE valorile
+# 2. Editează configurația
+nano /opt/traefik-configs/.env
 
-# 3. Deployment (include toate verificările automat)
+# 3. Rulează setup - va detecta automat configurația
+cd /opt/traefik
 ./scripts/setup.sh
+# Va afișa domeniul găsit și va cere confirmare
+```
+
+### Workflow Alternativ
+```bash
+# 1. Clonează template-ul oriunde
+git clone https://github.com/your-org/traefik-deploy.git ~/traefik
+cd ~/traefik
+
+# 2. Rulează setup - va întreba pentru calea către .env
+./scripts/setup.sh
+# Alege opțiunea 1 și introdu calea către .env existent
 ```
 
 ## 📋 Ghid Detaliat de Deployment
@@ -84,12 +97,21 @@ htpasswd -nb admin your_secure_password
 ```
 
 **Ce face scriptul automat:**
-1. **Pre-flight checks** - Verifică sistemul (Docker, porturi, resurse)
-2. **Validare configurație** - Verifică .env și toate variabilele
-3. **Creează rețele** - Dacă detectează conflicte, SE OPREȘTE cu instrucțiuni clare
-4. **Procesează template-uri** - Înlocuiește variabilele din .env
-5. **Creează structură** - Directoare și fișiere necesare
+1. **Detectare configurație**:
+   - Caută automat în `/opt/traefik-configs/.env`
+   - Afișează domeniul găsit și cere confirmare
+   - Permite introducerea unei căi alternative
+
+2. **Pre-flight checks** - Verifică sistemul (Docker, porturi, resurse)
+3. **Validare configurație** - Verifică .env și toate variabilele
+4. **Creează rețele** - Dacă detectează conflicte, SE OPREȘTE cu instrucțiuni clare
+5. **Procesează template-uri** - Înlocuiește variabilele din .env
 6. **Pornește Traefik** - Docker Compose up
+
+**Scenarii de configurare:**
+- **Găsește în locația standard** → Afișează domeniul și cere confirmare
+- **Nu găsește** → Oferă opțiuni: cale custom, creare din template, sau exit
+- **Confirmare negativă** → Permite introducerea altei căi
 
 **IMPORTANT**: Scriptul se oprește la prima eroare și oferă instrucțiuni clare pentru rezolvare.
 

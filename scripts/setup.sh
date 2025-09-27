@@ -121,20 +121,136 @@ if [ ! -z "$1" ]; then
     print_success "Configuration linked from branch: $SERVER_BRANCH"
 fi
 
-# Check for .env
-if [ ! -f .env ]; then
-    if [ -f .env.example ]; then
-        print_warning ".env not found. Creating from template..."
-        cp .env.example .env
-        print_error "Please edit .env with your configuration!"
-        echo "  nano .env"
+# Check for .env - with automatic detection for standard setup
+if [ ! -e .env ] && [ ! -L .env ]; then
+    print_warning ".env not found. Checking standard locations..."
+
+    # Standard location for external configs
+    STANDARD_CONFIG="/opt/traefik-configs/.env"
+
+    if [ -f "$STANDARD_CONFIG" ]; then
+        print_success "Found configuration in standard location: $STANDARD_CONFIG"
+
+        # Load the config temporarily to show domain
+        source "$STANDARD_CONFIG"
         echo ""
-        echo "After editing, run setup.sh again."
+        echo -e "${BLUE}Domain found: ${GREEN}$DOMAIN${NC}"
+        echo -e "${BLUE}Email: ${GREEN}$ACME_EMAIL${NC}"
+        echo ""
+
+        # Ask for confirmation
+        read -p "Use this configuration? [Y/n] " -n 1 -r
+        echo ""
+
+        if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+            ln -sf "$STANDARD_CONFIG" .env
+            print_success "Configuration linked from: $STANDARD_CONFIG"
+        else
+            # Ask for alternative path
+            echo ""
+            read -p "Enter path to .env file (or press Enter to exit): " CUSTOM_PATH
+
+            if [ -z "$CUSTOM_PATH" ]; then
+                print_error "Setup cancelled by user"
+                exit 1
+            fi
+
+            if [ ! -f "$CUSTOM_PATH" ]; then
+                print_error "File not found: $CUSTOM_PATH"
+                exit 1
+            fi
+
+            # Show config from custom path
+            source "$CUSTOM_PATH"
+            echo ""
+            echo -e "${BLUE}Domain found: ${GREEN}$DOMAIN${NC}"
+            echo -e "${BLUE}Email: ${GREEN}$ACME_EMAIL${NC}"
+            echo ""
+
+            read -p "Use this configuration? [Y/n] " -n 1 -r
+            echo ""
+
+            if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+                ln -sf "$(readlink -f "$CUSTOM_PATH")" .env
+                print_success "Configuration linked from: $CUSTOM_PATH"
+            else
+                print_error "Setup cancelled by user"
+                exit 1
+            fi
+        fi
+    else
+        # No standard config found, ask user
+        print_warning "Standard configuration not found at: $STANDARD_CONFIG"
+        echo ""
+        echo "Options:"
+        echo "  1. Enter path to existing .env file"
+        echo "  2. Create new .env from template"
+        echo "  3. Exit setup"
+        echo ""
+
+        read -p "Choose option [1-3]: " OPTION
+
+        case $OPTION in
+            1)
+                read -p "Enter path to .env file: " CUSTOM_PATH
+
+                if [ -z "$CUSTOM_PATH" ] || [ ! -f "$CUSTOM_PATH" ]; then
+                    print_error "Invalid file path"
+                    exit 1
+                fi
+
+                # Show config
+                source "$CUSTOM_PATH"
+                echo ""
+                echo -e "${BLUE}Domain found: ${GREEN}$DOMAIN${NC}"
+                echo -e "${BLUE}Email: ${GREEN}$ACME_EMAIL${NC}"
+                echo ""
+
+                read -p "Use this configuration? [Y/n] " -n 1 -r
+                echo ""
+
+                if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+                    ln -sf "$(readlink -f "$CUSTOM_PATH")" .env
+                    print_success "Configuration linked from: $CUSTOM_PATH"
+                else
+                    print_error "Setup cancelled"
+                    exit 1
+                fi
+                ;;
+            2)
+                if [ -f .env.example ]; then
+                    cp .env.example .env
+                    print_warning "Created .env from template"
+                    echo "Please edit the configuration:"
+                    echo "  nano .env"
+                    echo ""
+                    echo "Then run setup.sh again"
+                    exit 0
+                else
+                    print_error "No .env.example template found"
+                    exit 1
+                fi
+                ;;
+            *)
+                print_error "Setup cancelled"
+                exit 1
+                ;;
+        esac
+    fi
+fi
+
+# Check if .env is a symlink and validate
+if [ -L .env ]; then
+    if [ ! -e .env ]; then
+        print_error ".env is a broken symlink!"
+        echo "  Symlink points to: $(readlink .env)"
+        echo "  Target does not exist."
         exit 1
     else
-        print_error "No .env file found and no .env.example template!"
-        exit 1
+        print_success ".env linked from: $(readlink -f .env)"
     fi
+else
+    print_success ".env file found (local)"
 fi
 
 # Run configuration validator after .env is ensured to exist
@@ -246,8 +362,10 @@ create_network "management" "${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}" "true"
 # ============================================
 print_header "Setting up Traefik Configuration"
 
-# Create directories
-mkdir -p data/configurations logs
+# Create only essential directories if they don't exist
+[ ! -d data ] && mkdir -p data
+[ ! -d data/configurations ] && mkdir -p data/configurations
+[ ! -d logs ] && mkdir -p logs
 
 # Process template if exists
 if [ -f config/traefik.yml.template ]; then
