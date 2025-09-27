@@ -38,10 +38,14 @@ This is a production-ready Traefik v3.2 template repository with automated setup
 cp .env.example .env
 nano .env  # MUST edit with your actual values
 
-# 2. Run automated setup
+# 2. Check network availability (optional but recommended)
+./scripts/check-networks.sh
+# If conflicts detected, update .env with suggested subnets
+
+# 3. Run automated setup
 ./scripts/setup.sh
 
-# 3. Deploy Traefik
+# 4. Deploy Traefik
 docker-compose up -d
 ```
 
@@ -100,6 +104,7 @@ traefik/
 │   └── configurations/   # Dynamic configs
 ├── scripts/              # Automation scripts
 │   ├── setup.sh         # Main setup script
+│   ├── check-networks.sh # Pre-check network availability
 │   ├── setup-network-segmentation.sh
 │   └── create-networks.sh
 ├── examples/            # Service examples
