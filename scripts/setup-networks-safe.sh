@@ -208,9 +208,9 @@ fi
 # Define networks with defaults
 NETWORKS=(
     "traefik-public:${NETWORK_SUBNET_PUBLIC:-172.20.0.0/24}:false:DMZ/Edge network for Traefik"
-    "app-frontend:${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}:false:Frontend applications"
-    "db-backend:${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}:true:Database backend (isolated)"
-    "management:${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}:true:Management and monitoring"
+    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}:false:Frontend applications"
+    "traefik-backend:${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}:true:Database backend (isolated)"
+    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}:true:Management and monitoring"
 )
 
 echo "Planned networks:"
@@ -239,7 +239,7 @@ if [ $FAILED -eq 0 ]; then
     print_success "All networks ready!"
     echo ""
     echo "Active Traefik networks:"
-    docker network ls | grep -E "NAME|traefik-public|app-frontend|db-backend|management" | column -t
+    docker network ls | grep -E "NAME|traefik-" | column -t
 else
     print_error "$FAILED network(s) failed to create"
     echo ""
@@ -253,7 +253,7 @@ fi
 
 echo ""
 echo "Network architecture:"
-echo "  🌐 traefik-public  - External traffic entry"
-echo "  🔧 app-frontend    - Application services"
-echo "  🗄️  db-backend     - Database tier [INTERNAL]"
-echo "  🔐 management      - Monitoring tools [INTERNAL]"
+echo "  🌐 traefik-public    - External traffic entry"
+echo "  🔧 traefik-frontend  - Application services"
+echo "  🗄️  traefik-backend   - Database tier [INTERNAL]"
+echo "  🔐 traefik-management - Monitoring tools [INTERNAL]"

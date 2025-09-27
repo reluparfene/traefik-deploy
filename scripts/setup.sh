@@ -351,11 +351,11 @@ create_network() {
     fi
 }
 
-# Create networks
+# Create networks with clear traefik- prefix
 create_network "traefik-public" "${NETWORK_SUBNET_PUBLIC:-172.20.0.0/24}" "false"
-create_network "app-frontend" "${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}" "false"
-create_network "db-backend" "${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}" "true"
-create_network "management" "${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}" "true"
+create_network "traefik-frontend" "${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}" "false"
+create_network "traefik-backend" "${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}" "true"
+create_network "traefik-management" "${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}" "true"
 
 # ============================================
 # STEP 4: Setup Traefik configuration

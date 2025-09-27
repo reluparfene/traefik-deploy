@@ -18,9 +18,9 @@ This is a production-ready Traefik v3.2 template repository with automated setup
 
 ### Network Segmentation (4-tier architecture)
 - **traefik-public** (172.20.0.0/24) - DMZ/Edge network for external traffic
-- **app-frontend** (172.21.0.0/24) - Application services layer
-- **db-backend** (172.22.0.0/24) - Isolated database tier (internal only)
-- **management** (172.23.0.0/24) - Monitoring and admin tools (internal only)
+- **traefik-frontend** (172.21.0.0/24) - Application services layer
+- **traefik-backend** (172.22.0.0/24) - Isolated database tier (internal only)
+- **traefik-management** (172.23.0.0/24) - Monitoring and admin tools (internal only)
 
 ### Security Features
 - Rate limiting middleware (100 req avg, 50 burst)
@@ -122,11 +122,11 @@ traefik/
 services:
   my-app:
     networks:
-      - app-frontend
-      - db-backend  # Only if database access needed
+      - traefik-frontend
+      - traefik-backend  # Only if database access needed
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-frontend"
+      - "traefik.docker.network=traefik-frontend"
       - "traefik.http.routers.my-app.rule=Host(`app.${DOMAIN}`)"
       - "traefik.http.routers.my-app.entrypoints=websecure"
       - "traefik.http.routers.my-app.tls.certresolver=le-dns"
@@ -175,8 +175,8 @@ Key variables to configure:
 ## Troubleshooting
 
 ### Service Not Accessible
-1. Check if service is on `app-frontend` network
-2. Verify label: `traefik.docker.network=app-frontend`
+1. Check if service is on `traefik-frontend` network
+2. Verify label: `traefik.docker.network=traefik-frontend`
 3. Ensure `traefik.enable=true` is set
 4. Check DNS resolution for the domain
 5. Review logs: `docker logs traefik-proxy`
@@ -196,7 +196,7 @@ docker exec traefik-proxy ping <service-name>
 docker inspect <service-name> | grep NetworkMode
 
 # List containers in network
-docker network inspect app-frontend
+docker network inspect traefik-frontend
 ```
 
 ## Template Usage

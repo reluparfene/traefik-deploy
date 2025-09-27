@@ -24,15 +24,15 @@ services:
       traefik-public:
         ipv4_address: "172.20.0.2"
       # Frontend network - to reach application services
-      app-frontend:
+      traefik-frontend:
         ipv4_address: "172.21.0.2"
       # Management network - for monitoring/admin (optional)
-      management:
+      traefik-management:
         ipv4_address: "172.23.0.2"
     labels:
       - "traefik.enable=true"
-      # Important: Traefik connects to services via app-frontend network
-      - "traefik.docker.network=app-frontend"
+      # Important: Traefik connects to services via traefik-frontend network
+      - "traefik.docker.network=traefik-frontend"
 
       # HTTP router with redirect to HTTPS
       - "traefik.http.routers.traefik.entrypoints=web"
@@ -62,7 +62,7 @@ services:
 networks:
   traefik-public:
     external: true
-  app-frontend:
+  traefik-frontend:
     external: true
-  management:
+  traefik-management:
     external: true

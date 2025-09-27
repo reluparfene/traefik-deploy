@@ -200,9 +200,9 @@ chmod 600 data/acme.json
 ### Rețele Izolate
 Template-ul creează 4 rețele separate:
 - `traefik-public` (172.20.0.0/24) - Pentru trafic extern
-- `app-frontend` (172.21.0.0/24) - Pentru aplicații
-- `db-backend` (172.22.0.0/24) - Pentru baze de date (INTERNAL)
-- `management` (172.23.0.0/24) - Pentru monitoring (INTERNAL)
+- `traefik-frontend` (172.21.0.0/24) - Pentru aplicații
+- `traefik-backend` (172.22.0.0/24) - Pentru baze de date (INTERNAL)
+- `traefik-management` (172.23.0.0/24) - Pentru monitoring (INTERNAL)
 
 ### Best Practices
 1. **NICIODATĂ** nu expune Docker socket-ul public

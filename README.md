@@ -117,9 +117,9 @@ The template implements a secure 4-tier network architecture:
 | Network | Subnet | Purpose |
 |---------|--------|---------|
 | traefik-public | 172.20.0.0/24 | External traffic entry |
-| app-frontend | 172.21.0.0/24 | Application services |
-| db-backend | 172.22.0.0/24 | Databases (isolated) |
-| management | 172.23.0.0/24 | Monitoring tools |
+| traefik-frontend | 172.21.0.0/24 | Application services |
+| traefik-backend | 172.22.0.0/24 | Databases (isolated) |
+| traefik-management | 172.23.0.0/24 | Monitoring tools |
 
 ## 🔒 Security Features
 
@@ -142,11 +142,11 @@ services:
   wordpress:
     image: wordpress:latest
     networks:
-      - app-frontend
-      - db-backend
+      - traefik-frontend
+      - traefik-backend
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-frontend"
+      - "traefik.docker.network=traefik-frontend"
       - "traefik.http.routers.wordpress.rule=Host(`blog.${DOMAIN}`)"
       - "traefik.http.routers.wordpress.entrypoints=websecure"
       - "traefik.http.routers.wordpress.tls.certresolver=le-dns"

@@ -87,9 +87,9 @@ fi
 # Define required networks with defaults
 NETWORKS=(
     "traefik-public:${NETWORK_SUBNET_PUBLIC:-172.20.0.0/24}"
-    "app-frontend:${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}"
-    "db-backend:${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}"
-    "management:${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}"
+    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}"
+    "traefik-backend:${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}"
+    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}"
 )
 
 # Track suggestions
@@ -168,13 +168,13 @@ if [ "$HAS_CONFLICTS" = true ]; then
             "traefik-public")
                 echo "NETWORK_SUBNET_PUBLIC=$subnet"
                 ;;
-            "app-frontend")
+            "traefik-frontend")
                 echo "NETWORK_SUBNET_FRONTEND=$subnet"
                 ;;
-            "db-backend")
+            "traefik-backend")
                 echo "NETWORK_SUBNET_BACKEND=$subnet"
                 ;;
-            "management")
+            "traefik-management")
                 echo "NETWORK_SUBNET_MANAGEMENT=$subnet"
                 ;;
         esac
