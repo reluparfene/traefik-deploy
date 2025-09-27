@@ -1,23 +1,32 @@
 #!/bin/bash
 
 # ============================================
-# Traefik Template - Automated Setup Script
+# Traefik Complete Setup Script
 # ============================================
+# Usage:
+#   ./scripts/setup.sh                    # Uses existing .env
+#   ./scripts/setup.sh echo.misavan.net   # Clones config from branch
 
 set -e
 
-# Colors for output
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
+
+# Configuration
+CONFIGS_REPO="https://github.com/reluparfene/traefik-configs.git"
+CONFIG_DIR="/opt/traefik-config"
 
 # Functions
 print_header() {
-    echo -e "\n${BLUE}============================================${NC}"
+    echo ""
+    echo -e "${BLUE}============================================${NC}"
     echo -e "${BLUE}   $1${NC}"
-    echo -e "${BLUE}============================================${NC}\n"
+    echo -e "${BLUE}============================================${NC}"
+    echo ""
 }
 
 print_success() {
@@ -39,188 +48,246 @@ check_command() {
     fi
 }
 
-# Get script directory and project root
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# ============================================
+# STEP 1: Handle configuration
+# ============================================
+print_header "Traefik Setup"
 
-# Change to project root
-cd "$PROJECT_ROOT"
+# If branch name provided, get config from that branch
+if [ ! -z "$1" ]; then
+    SERVER_BRANCH=$1
+    print_warning "Setting up with config from branch: $SERVER_BRANCH"
 
-# Main Setup
-print_header "Traefik Template Setup"
+    # Check for token
+    if [ -z "$GITHUB_TOKEN" ]; then
+        print_warning "No GITHUB_TOKEN set. Assuming public repository."
+        CONFIGS_URL=$CONFIGS_REPO
+    else
+        CONFIGS_URL=$(echo $CONFIGS_REPO | sed "s|https://|https://${GITHUB_TOKEN}@|")
+    fi
 
-# Check installation location
-if [[ "$PWD" != "/opt/traefik" ]]; then
-    print_warning "Current directory: $PWD"
-    print_warning "Recommended production location: /opt/traefik"
-    print_warning "See docs/INSTALLATION_LOCATION.md for details"
-    echo ""
+    # Clone or update config
+    if [ ! -d "$CONFIG_DIR" ]; then
+        print_warning "Cloning configuration..."
+        if ! git clone -b "$SERVER_BRANCH" "$CONFIGS_URL" "$CONFIG_DIR" 2>/dev/null; then
+            print_error "Failed to clone branch '$SERVER_BRANCH'"
+            exit 1
+        fi
+    else
+        print_warning "Updating configuration..."
+        cd "$CONFIG_DIR"
+        CURRENT=$(git branch --show-current)
+        if [ "$CURRENT" != "$SERVER_BRANCH" ]; then
+            git checkout "$SERVER_BRANCH"
+        fi
+        git pull
+        cd - > /dev/null
+    fi
+
+    # Link .env
+    if [ -f .env ] && [ ! -L .env ]; then
+        cp .env .env.backup
+        print_warning "Backed up existing .env to .env.backup"
+    fi
+    ln -sf "$CONFIG_DIR/.env" .env
+    print_success "Configuration linked from branch: $SERVER_BRANCH"
 fi
 
-# 1. Check prerequisites
-echo "Checking prerequisites..."
-check_command docker
-check_command docker-compose
-print_success "Prerequisites verified"
-
-# 2. Check for .env file
+# Check for .env
 if [ ! -f .env ]; then
     if [ -f .env.example ]; then
-        print_warning ".env file not found. Creating from template..."
+        print_warning ".env not found. Creating from template..."
         cp .env.example .env
-        print_warning "Please edit .env file with your configuration!"
-        echo "Press Enter when ready to continue..."
-        read
+        print_error "Please edit .env with your configuration!"
+        echo "  nano .env"
+        exit 1
     else
-        print_error ".env.example not found!"
+        print_error "No .env file found!"
         exit 1
     fi
-else
-    print_success ".env file found"
 fi
 
-# 3. Load environment variables
+# Load and validate environment
 source .env
-
-# 4. Validate required variables
-print_header "Validating Configuration"
-
-REQUIRED_VARS=(
-    "DOMAIN"
-    "ACME_EMAIL"
-    "CLOUDNS_SUB_AUTH_ID"
-    "CLOUDNS_AUTH_PASSWORD"
-)
-
+REQUIRED_VARS=("DOMAIN" "ACME_EMAIL" "CLOUDNS_SUB_AUTH_ID" "CLOUDNS_AUTH_PASSWORD")
 for var in "${REQUIRED_VARS[@]}"; do
     if [ -z "${!var}" ]; then
-        print_error "$var is not set in .env file!"
+        print_error "$var is not set in .env!"
         exit 1
     fi
 done
 print_success "Configuration validated"
 
-# 5. Create Docker networks
+# ============================================
+# STEP 2: Check prerequisites
+# ============================================
+print_header "Checking Prerequisites"
+
+check_command docker
+check_command docker-compose
+print_success "Prerequisites verified"
+
+# ============================================
+# STEP 3: Create Docker networks
+# ============================================
 print_header "Creating Docker Networks"
 
-# Try the safe network setup first
-if [ -f ./scripts/setup-networks-safe.sh ]; then
-    ./scripts/setup-networks-safe.sh
-elif [ -f ./scripts/create-networks-simple.sh ]; then
-    ./scripts/create-networks-simple.sh
-else
-    ./scripts/setup-network-segmentation.sh
-fi
+create_network() {
+    local name=$1
+    local subnet=$2
+    local internal=$3
 
-# 6. Setup Traefik configuration
-print_header "Setting up Traefik Configuration"
-
-# Create config directory structure
-mkdir -p data/configurations
-mkdir -p logs
-
-# Process traefik.yml template
-if [ -f config/traefik.yml.template ]; then
-    # Check for envsubst
-    if ! command -v envsubst &> /dev/null; then
-        print_error "envsubst not found! Installing..."
-        if command -v apt-get &> /dev/null; then
-            apt-get update && apt-get install -y gettext-base
+    # Check if network exists
+    if docker network inspect "$name" &>/dev/null; then
+        local existing_subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$name")
+        if [ "$existing_subnet" == "$subnet" ]; then
+            print_success "Network '$name' exists with correct subnet"
         else
-            print_error "Please install gettext-base package manually"
-            exit 1
+            print_warning "Network '$name' exists with different subnet: $existing_subnet"
+            print_warning "To recreate: docker network rm $name"
         fi
+        return
     fi
 
-    print_warning "Processing traefik.yml template..."
+    # Check for subnet conflict
+    local conflicts=$(docker network ls -q | xargs -r docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}} {{.Name}}' 2>/dev/null | grep "^$subnet " | cut -d' ' -f2)
+    if [ ! -z "$conflicts" ]; then
+        print_error "Subnet $subnet already used by: $conflicts"
+        print_warning "Using alternative subnet..."
 
-    # Export all variables from .env for envsubst
+        # Try alternative subnets
+        local base="${subnet%.*.*}"
+        local third="${subnet#*.*.}"
+        third="${third%%.*}"
+
+        for i in {1..10}; do
+            local new_subnet="$base.$((third + i)).0/24"
+            if ! docker network ls -q | xargs -r docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' 2>/dev/null | grep -q "^$new_subnet$"; then
+                subnet=$new_subnet
+                print_warning "Using alternative: $subnet"
+                break
+            fi
+        done
+    fi
+
+    # Create network
+    local cmd="docker network create --driver=bridge --subnet=$subnet"
+    if [ "$internal" == "true" ]; then
+        cmd="$cmd --internal"
+    fi
+    cmd="$cmd $name"
+
+    if $cmd; then
+        print_success "Created network: $name ($subnet) $([ "$internal" == "true" ] && echo "[INTERNAL]")"
+    else
+        print_error "Failed to create network: $name"
+        return 1
+    fi
+}
+
+# Create networks
+create_network "traefik-public" "${NETWORK_SUBNET_PUBLIC:-172.20.0.0/24}" "false"
+create_network "app-frontend" "${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}" "false"
+create_network "db-backend" "${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}" "true"
+create_network "management" "${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}" "true"
+
+# ============================================
+# STEP 4: Setup Traefik configuration
+# ============================================
+print_header "Setting up Traefik Configuration"
+
+# Create directories
+mkdir -p data/configurations logs
+
+# Process template if exists
+if [ -f config/traefik.yml.template ]; then
+    # Check envsubst
+    if ! command -v envsubst &> /dev/null; then
+        print_warning "Installing envsubst..."
+        apt-get update && apt-get install -y gettext-base
+    fi
+
+    print_warning "Processing configuration template..."
+
+    # Export all vars for envsubst
     set -a
     source .env
     set +a
 
-    # Process template with specific variable list
-    envsubst '${DOMAIN} ${SUBDOMAIN_TRAEFIK} ${ACME_EMAIL} ${TRAEFIK_DASHBOARD_ENABLED} ${CERT_RESOLVER} ${DNS_PROVIDER} ${DNS_RESOLVERS} ${DNS_RESOLVERS_FALLBACK} ${DNS_CHECK_DELAY} ${TRAEFIK_LOG_LEVEL} ${TRAEFIK_LOG_FORMAT}' < config/traefik.yml.template > data/traefik.yml
+    # Process template
+    envsubst < config/traefik.yml.template > data/traefik.yml
 
     # Verify substitution worked
     if grep -q '${DOMAIN}' data/traefik.yml; then
-        print_error "Variable substitution failed! Check your .env file."
-        print_warning "Attempting manual substitution..."
+        print_warning "Using fallback substitution method..."
         cp config/traefik.yml.template data/traefik.yml
-        sed -i "s/\${TRAEFIK_DASHBOARD_ENABLED:-true}/true/g" data/traefik.yml
         sed -i "s/\${DOMAIN}/$DOMAIN/g" data/traefik.yml
-        sed -i "s/\${SUBDOMAIN_TRAEFIK:-traefik.\${DOMAIN}}/$SUBDOMAIN_TRAEFIK/g" data/traefik.yml
+        sed -i "s/\${SUBDOMAIN_TRAEFIK:-traefik.\${DOMAIN}}/${SUBDOMAIN_TRAEFIK:-traefik.$DOMAIN}/g" data/traefik.yml
         sed -i "s/\${ACME_EMAIL}/$ACME_EMAIL/g" data/traefik.yml
+        sed -i "s/\${TRAEFIK_DASHBOARD_ENABLED:-true}/true/g" data/traefik.yml
     fi
 
-    print_success "traefik.yml created"
-else
-    print_warning "Using existing traefik.yml"
+    print_success "Configuration processed"
 fi
 
-# Copy dynamic configurations
+# Copy dynamic configs
 if [ -d config/dynamic ]; then
-    cp -r config/dynamic/* data/configurations/
+    cp -r config/dynamic/* data/configurations/ 2>/dev/null || true
     print_success "Dynamic configurations copied"
 fi
 
-# 7. Setup ACME storage
+# ============================================
+# STEP 5: Setup SSL certificate storage
+# ============================================
 print_header "Setting up Certificate Storage"
 
 if [ ! -f data/acme.json ]; then
     touch data/acme.json
     chmod 600 data/acme.json
-    print_success "acme.json created with correct permissions"
+    print_success "Certificate storage created"
 else
-    print_success "acme.json already exists"
+    chmod 600 data/acme.json
+    print_success "Certificate storage verified"
 fi
 
-# 8. Create backup directory
-mkdir -p backups
-print_success "Backup directory created"
+# ============================================
+# STEP 6: Start services
+# ============================================
+print_header "Starting Services"
 
-# 9. Generate basic auth password if needed
-if [ -z "$TRAEFIK_BASIC_AUTH_PASSWORD" ] || [ "$TRAEFIK_BASIC_AUTH_PASSWORD" == '$$apr1$$your$$encrypted$$password' ]; then
-    print_header "Generating Basic Auth Password"
-    echo -n "Enter password for Traefik dashboard user '$TRAEFIK_BASIC_AUTH_USER': "
-    read -s password
-    echo
-
-    if command -v htpasswd &> /dev/null; then
-        ENCRYPTED_PASS=$(htpasswd -nb $TRAEFIK_BASIC_AUTH_USER $password | sed -e s/\\$/\\$\\$/g)
-        sed -i "s|TRAEFIK_BASIC_AUTH_PASSWORD=.*|TRAEFIK_BASIC_AUTH_PASSWORD=$ENCRYPTED_PASS|" .env
-        print_success "Password encrypted and saved to .env"
-    else
-        print_warning "htpasswd not found. Please install apache2-utils and manually generate password"
-    fi
-fi
-
-# 10. Create docker-compose override if needed
-if [ ! -f docker-compose.override.yml ] && [ -f docker-compose.override.yml.example ]; then
-    cp docker-compose.override.yml.example docker-compose.override.yml
-    print_success "docker-compose.override.yml created"
-fi
-
-# 11. Final validation
-print_header "Final Validation"
-
-docker-compose config > /dev/null 2>&1
-if [ $? -eq 0 ]; then
-    print_success "Docker Compose configuration is valid"
-else
-    print_error "Docker Compose configuration validation failed!"
+# Validate docker-compose
+if ! docker-compose config >/dev/null 2>&1; then
+    print_error "Docker Compose configuration invalid!"
+    docker-compose config
     exit 1
 fi
 
-# 12. Summary
+# Start
+docker-compose up -d
+
+# ============================================
+# STEP 7: Summary
+# ============================================
 print_header "Setup Complete!"
 
+# Show status
+docker-compose ps
+
+echo ""
+echo "Configuration:"
+echo "  Domain: $DOMAIN"
+echo "  Dashboard: https://traefik.$DOMAIN"
+echo "  Email: $ACME_EMAIL"
+
+if [ ! -z "$SERVER_BRANCH" ]; then
+    echo "  Config branch: $SERVER_BRANCH"
+fi
+
+echo ""
 echo "Next steps:"
-echo "1. Review your .env configuration"
-echo "2. Start Traefik with: docker-compose up -d"
-echo "3. Check logs with: docker-compose logs -f"
-echo "4. Access dashboard at: https://${SUBDOMAIN_TRAEFIK:-traefik.$DOMAIN}"
+echo "  1. Check logs: docker-compose logs -f traefik"
+echo "  2. Access dashboard: https://traefik.$DOMAIN"
+echo "  3. Monitor certificates: watch docker exec traefik-proxy cat /acme.json | jq ."
+
 echo ""
-echo "For examples, check the examples/ directory"
-echo ""
-print_success "Setup completed successfully!"
+print_success "Traefik is ready!"
