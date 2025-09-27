@@ -130,7 +130,28 @@ print_header "Configuration Templates"
 
 # Check traefik.yml.template
 if [ -f config/traefik.yml.template ]; then
-    print_success "Traefik configuration template found"
+    # Check for unsubstituted variables
+    if grep -q '\${.*}' config/traefik.yml.template; then
+        vars_found=$(grep -o '\${[^}]*}' config/traefik.yml.template | sort -u)
+        echo "Variables found in template:"
+        for var in $vars_found; do
+            var_name=$(echo $var | sed 's/\${//;s/}//;s/:.*//')
+            # Skip if var_name is empty or contains invalid characters
+            if [[ -z "$var_name" ]] || [[ "$var_name" =~ [^a-zA-Z0-9_] ]]; then
+                continue
+            fi
+            if [ ! -z "${!var_name}" ]; then
+                print_success "  $var_name is set"
+            else
+                # Check if it has a default value
+                if [[ "$var" == *":-"* ]]; then
+                    print_success "  $var has default value"
+                else
+                    print_warning "  $var_name might not be set"
+                fi
+            fi
+        done
+    fi
 else
     print_error "config/traefik.yml.template not found!"
 fi
