@@ -39,8 +39,23 @@ check_command() {
     fi
 }
 
+# Get script directory and project root
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Change to project root
+cd "$PROJECT_ROOT"
+
 # Main Setup
 print_header "Traefik Template Setup"
+
+# Check installation location
+if [[ "$PWD" != "/opt/traefik" ]]; then
+    print_warning "Current directory: $PWD"
+    print_warning "Recommended production location: /opt/traefik"
+    print_warning "See docs/INSTALLATION_LOCATION.md for details"
+    echo ""
+fi
 
 # 1. Check prerequisites
 echo "Checking prerequisites..."

@@ -27,7 +27,6 @@ create_network() {
                 --subnet="$subnet" \
                 --gateway="$gateway" \
                 --internal \
-                --opt com.docker.network.bridge.name="br-$name" \
                 --label "purpose=$description" \
                 "$name"
             echo "✅ Created INTERNAL network: $name ($subnet)"
@@ -36,7 +35,6 @@ create_network() {
                 --driver=bridge \
                 --subnet="$subnet" \
                 --gateway="$gateway" \
-                --opt com.docker.network.bridge.name="br-$name" \
                 --label "purpose=$description" \
                 "$name"
             echo "✅ Created network: $name ($subnet)"

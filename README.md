@@ -19,10 +19,19 @@ A comprehensive, security-focused Traefik v3.2 template with automated setup, ne
 - A domain with DNS management access
 - Linux host (Ubuntu/Debian recommended)
 
+## 📍 Installation Location
+
+For production environments, we recommend installing Traefik in `/opt/traefik/`. See [Installation Location Guide](docs/INSTALLATION_LOCATION.md) for detailed recommendations.
+
 ## 🚀 Quick Start
 
 ```bash
-# 1. Clone the template
+# 1. Clone the template (to recommended location)
+sudo mkdir -p /opt/traefik
+cd /opt/traefik
+sudo git clone https://github.com/yourusername/traefik-template.git .
+
+# Or for development
 git clone https://github.com/yourusername/traefik-template.git
 cd traefik-template
 
