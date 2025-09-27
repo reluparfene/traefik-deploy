@@ -1,0 +1,23 @@
+# Docker Compose Override Example
+# Copy this file to docker-compose.override.yml for local customizations
+
+version: '3.8'
+
+services:
+  traefik:
+    # Example: Add custom environment variables
+    # environment:
+    #   - CUSTOM_VAR=value
+
+    # Example: Add additional volumes
+    # volumes:
+    #   - ./custom-config:/custom-config:ro
+
+    # Example: Change ports
+    # ports:
+    #   - "8080:80"
+    #   - "8443:443"
+
+    # Example: Add custom labels
+    # labels:
+    #   - "custom.label=value"

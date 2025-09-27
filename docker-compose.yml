@@ -1,0 +1,68 @@
+services:
+  traefik:
+    image: traefik:v3.2
+    container_name: traefik-proxy
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - CLOUDNS_SUB_AUTH_ID=${CLOUDNS_SUB_AUTH_ID}
+      - CLOUDNS_AUTH_PASSWORD=${CLOUDNS_AUTH_PASSWORD}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik.yml:/traefik.yml:ro
+      - ./data/acme.json:/acme.json
+      # Add folder with dynamic configuration yml
+      - ./data/configurations:/configurations
+      - ./traefik.log:/traefik.log
+    networks:
+      # Public network - for external traffic
+      traefik-public:
+        ipv4_address: "172.20.0.2"
+      # Frontend network - to reach application services
+      app-frontend:
+        ipv4_address: "172.21.0.2"
+      # Management network - for monitoring/admin (optional)
+      management:
+        ipv4_address: "172.23.0.2"
+    labels:
+      - "traefik.enable=true"
+      # Important: Traefik connects to services via app-frontend network
+      - "traefik.docker.network=app-frontend"
+
+      # HTTP router with redirect to HTTPS
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.rule=Host(`${SUBDOMAIN_TRAEFIK:-traefik.example.com}`)"
+      - "traefik.http.routers.traefik.middlewares=https-redirect@file"
+
+      # HTTPS router with enhanced security
+      - "traefik.http.routers.traefik-secure.entrypoints=websecure"
+      - "traefik.http.routers.traefik-secure.rule=Host(`${SUBDOMAIN_TRAEFIK:-traefik.example.com}`)"
+      - "traefik.http.routers.traefik-secure.middlewares=user-auth@file,secureHeaders@file,rate-limit@docker,traefik-headers@docker"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=le-dns"
+
+      # Rate limiting middleware
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
+      - "traefik.http.middlewares.rate-limit.ratelimit.sourcecriterion.ipstrategy.depth=2"
+
+      # Security headers middleware
+      - "traefik.http.middlewares.traefik-headers.headers.customresponseheaders.X-Robots-Tag=noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+      - "traefik.http.middlewares.traefik-headers.headers.accesscontrolallowmethods=GET,OPTIONS,PUT"
+      - "traefik.http.middlewares.traefik-headers.headers.accesscontrolalloworiginlist=https://${SUBDOMAIN_TRAEFIK:-traefik.example.com}"
+      - "traefik.http.middlewares.traefik-headers.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.traefik-headers.headers.addvaryheader=true"
+
+networks:
+  traefik-public:
+    external: true
+  app-frontend:
+    external: true
+  management:
+    external: true

@@ -1,0 +1,117 @@
+# ============================================
+# Reusable Middleware Configurations
+# ============================================
+
+http:
+  middlewares:
+    # HTTPS Redirect
+    https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    # Security Headers
+    secure-headers:
+      headers:
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        frameDeny: true
+        sslRedirect: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customFrameOptionsValue: "SAMEORIGIN"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex,nofollow,nosnippet,noarchive,notranslate,noimageindex"
+          X-Powered-By: ""
+          Server: ""
+
+    # Rate Limiting - Default
+    rate-limit:
+      rateLimit:
+        average: ${RATE_LIMIT_AVERAGE:-100}
+        burst: ${RATE_LIMIT_BURST:-50}
+        sourceCriterion:
+          ipStrategy:
+            depth: 2
+
+    # Rate Limiting - Strict
+    rate-limit-strict:
+      rateLimit:
+        average: 10
+        burst: 20
+        sourceCriterion:
+          ipStrategy:
+            depth: 2
+
+    # Basic Authentication
+    auth-basic:
+      basicAuth:
+        users:
+          - "${TRAEFIK_BASIC_AUTH_USER}:${TRAEFIK_BASIC_AUTH_PASSWORD}"
+        realm: "Restricted Access"
+        removeHeader: true
+
+    # IP Whitelist (Example)
+    ip-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - "10.0.0.0/8"
+          - "192.168.0.0/16"
+          - "172.16.0.0/12"
+
+    # Compress Responses
+    compress:
+      compress:
+        excludedContentTypes:
+          - text/event-stream
+
+    # CORS Headers
+    cors-headers:
+      headers:
+        accessControlAllowMethods:
+          - "GET"
+          - "OPTIONS"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "https://${DOMAIN}"
+          - "https://*.${DOMAIN}"
+        accessControlMaxAge: 100
+        addVaryHeader: true
+
+    # No Cache Headers
+    no-cache:
+      headers:
+        customResponseHeaders:
+          Cache-Control: "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+          Pragma: "no-cache"
+          Expires: "0"
+
+    # Chain: Full Security (combine multiple middlewares)
+    security-chain:
+      chain:
+        middlewares:
+          - rate-limit
+          - secure-headers
+          - compress
+
+    # Retry
+    retry-attempts:
+      retry:
+        attempts: 3
+        initialInterval: 100ms
+
+    # Circuit Breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30"
+
+    # Content Type
+    content-type:
+      contentType:
+        autoDetect: false

@@ -1,0 +1,39 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Runtime data directory (created during setup)
+data/
+
+# ACME certificates (contains private keys)
+*.json
+!*.example.json
+!package.json
+!composer.json
+
+# Logs
+*.log
+logs/
+traefik.log
+
+# Backup files
+*.bak
+*.backup
+*.old
+backups/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Docker override files (user-specific)
+docker-compose.override.yml
+!docker-compose.override.yml.example
