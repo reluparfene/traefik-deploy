@@ -103,7 +103,14 @@ print_success "Configuration validated"
 # 5. Create Docker networks
 print_header "Creating Docker Networks"
 
-./scripts/setup-network-segmentation.sh
+# Try the safe network setup first
+if [ -f ./scripts/setup-networks-safe.sh ]; then
+    ./scripts/setup-networks-safe.sh
+elif [ -f ./scripts/create-networks-simple.sh ]; then
+    ./scripts/create-networks-simple.sh
+else
+    ./scripts/setup-network-segmentation.sh
+fi
 
 # 6. Setup Traefik configuration
 print_header "Setting up Traefik Configuration"
@@ -114,8 +121,38 @@ mkdir -p logs
 
 # Process traefik.yml template
 if [ -f config/traefik.yml.template ]; then
+    # Check for envsubst
+    if ! command -v envsubst &> /dev/null; then
+        print_error "envsubst not found! Installing..."
+        if command -v apt-get &> /dev/null; then
+            apt-get update && apt-get install -y gettext-base
+        else
+            print_error "Please install gettext-base package manually"
+            exit 1
+        fi
+    fi
+
     print_warning "Processing traefik.yml template..."
-    envsubst < config/traefik.yml.template > data/traefik.yml
+
+    # Export all variables from .env for envsubst
+    set -a
+    source .env
+    set +a
+
+    # Process template with specific variable list
+    envsubst '${DOMAIN} ${SUBDOMAIN_TRAEFIK} ${ACME_EMAIL} ${TRAEFIK_DASHBOARD_ENABLED} ${CERT_RESOLVER} ${DNS_PROVIDER} ${DNS_RESOLVERS} ${DNS_RESOLVERS_FALLBACK} ${DNS_CHECK_DELAY} ${TRAEFIK_LOG_LEVEL} ${TRAEFIK_LOG_FORMAT}' < config/traefik.yml.template > data/traefik.yml
+
+    # Verify substitution worked
+    if grep -q '${DOMAIN}' data/traefik.yml; then
+        print_error "Variable substitution failed! Check your .env file."
+        print_warning "Attempting manual substitution..."
+        cp config/traefik.yml.template data/traefik.yml
+        sed -i "s/\${TRAEFIK_DASHBOARD_ENABLED:-true}/true/g" data/traefik.yml
+        sed -i "s/\${DOMAIN}/$DOMAIN/g" data/traefik.yml
+        sed -i "s/\${SUBDOMAIN_TRAEFIK:-traefik.\${DOMAIN}}/$SUBDOMAIN_TRAEFIK/g" data/traefik.yml
+        sed -i "s/\${ACME_EMAIL}/$ACME_EMAIL/g" data/traefik.yml
+    fi
+
     print_success "traefik.yml created"
 else
     print_warning "Using existing traefik.yml"

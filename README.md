@@ -261,6 +261,10 @@ If not accessible:
 3. Check credentials in `.env`
 4. Review logs: `docker-compose logs traefik`
 
+## 🔄 Updating from Template
+
+If you created a server repository from this template, see [Updating from Template Guide](docs/UPDATING_FROM_TEMPLATE.md) to keep it synchronized with template improvements.
+
 ## 📚 Advanced Configuration
 
 ### Custom Middleware
