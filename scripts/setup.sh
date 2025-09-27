@@ -9,6 +9,10 @@
 
 set -e
 
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -49,9 +53,33 @@ check_command() {
 }
 
 # ============================================
+# STEP 0: Run validation checks first
+# ============================================
+print_header "Traefik Setup - Starting Validation"
+
+# Check if we're in the right directory
+if [ ! -f "docker-compose.yml" ]; then
+    print_error "Must run from Traefik directory root!"
+    echo "  Current directory: $(pwd)"
+    exit 1
+fi
+
+# Run pre-flight checks first (system level checks)
+if [ -f "$SCRIPT_DIR/preflight-check.sh" ]; then
+    print_warning "Running system pre-flight checks..."
+    if ! "$SCRIPT_DIR/preflight-check.sh"; then
+        print_error "Pre-flight checks failed!"
+        echo ""
+        echo "Fix the system errors above and run setup.sh again."
+        exit 1
+    fi
+    print_success "System checks passed"
+fi
+
+# ============================================
 # STEP 1: Handle configuration
 # ============================================
-print_header "Traefik Setup"
+print_header "Configuration Setup"
 
 # If branch name provided, get config from that branch
 if [ ! -z "$1" ]; then
@@ -100,32 +128,30 @@ if [ ! -f .env ]; then
         cp .env.example .env
         print_error "Please edit .env with your configuration!"
         echo "  nano .env"
+        echo ""
+        echo "After editing, run setup.sh again."
         exit 1
     else
-        print_error "No .env file found!"
+        print_error "No .env file found and no .env.example template!"
         exit 1
     fi
 fi
 
-# Load and validate environment
-source .env
-REQUIRED_VARS=("DOMAIN" "ACME_EMAIL" "CLOUDNS_SUB_AUTH_ID" "CLOUDNS_AUTH_PASSWORD")
-for var in "${REQUIRED_VARS[@]}"; do
-    if [ -z "${!var}" ]; then
-        print_error "$var is not set in .env!"
+# Run configuration validator after .env is ensured to exist
+if [ -f "$SCRIPT_DIR/validate-config.sh" ]; then
+    print_warning "Validating configuration..."
+    if ! "$SCRIPT_DIR/validate-config.sh"; then
+        print_error "Configuration validation failed!"
+        echo ""
+        echo "Fix the errors in .env and run setup.sh again."
         exit 1
     fi
-done
-print_success "Configuration validated"
+    print_success "Configuration is valid"
+fi
 
-# ============================================
-# STEP 2: Check prerequisites
-# ============================================
-print_header "Checking Prerequisites"
-
-check_command docker
-check_command docker-compose
-print_success "Prerequisites verified"
+# Load environment (validation already done by validate-config.sh)
+source .env
+print_success "Environment loaded"
 
 # ============================================
 # STEP 3: Create Docker networks
@@ -143,31 +169,46 @@ create_network() {
         if [ "$existing_subnet" == "$subnet" ]; then
             print_success "Network '$name' exists with correct subnet"
         else
-            print_warning "Network '$name' exists with different subnet: $existing_subnet"
-            print_warning "To recreate: docker network rm $name"
+            print_error "CONFLICT: Network '$name' already exists with different subnet!"
+            echo ""
+            echo "  Expected subnet: $subnet"
+            echo "  Current subnet:  $existing_subnet"
+            echo ""
+            echo "  Solutions:"
+            echo "  1. Remove the existing network (if not in use):"
+            echo "     docker network rm $name"
+            echo ""
+            echo "  2. Or check what's using it:"
+            echo "     docker network inspect $name"
+            echo ""
+            print_error "Setup aborted due to network conflict!"
+            exit 1
         fi
         return
     fi
 
-    # Check for subnet conflict
+    # Check for subnet conflict - FAIL if exists
     local conflicts=$(docker network ls -q | xargs -r docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}} {{.Name}}' 2>/dev/null | grep "^$subnet " | cut -d' ' -f2)
     if [ ! -z "$conflicts" ]; then
-        print_error "Subnet $subnet already used by: $conflicts"
-        print_warning "Using alternative subnet..."
-
-        # Try alternative subnets
-        local base="${subnet%.*.*}"
-        local third="${subnet#*.*.}"
-        third="${third%%.*}"
-
-        for i in {1..10}; do
-            local new_subnet="$base.$((third + i)).0/24"
-            if ! docker network ls -q | xargs -r docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' 2>/dev/null | grep -q "^$new_subnet$"; then
-                subnet=$new_subnet
-                print_warning "Using alternative: $subnet"
-                break
-            fi
-        done
+        print_error "SUBNET CONFLICT: Cannot create network '$name'!"
+        echo ""
+        echo "  Subnet $subnet is already in use by network: $conflicts"
+        echo ""
+        echo "  This template requires the following subnets to be available:"
+        echo "    - 172.20.0.0/24 for traefik-public"
+        echo "    - 172.21.0.0/24 for app-frontend"
+        echo "    - 172.22.0.0/24 for db-backend"
+        echo "    - 172.23.0.0/24 for management"
+        echo ""
+        echo "  Solutions:"
+        echo "  1. Remove the conflicting network (if not in use):"
+        echo "     docker network rm $conflicts"
+        echo ""
+        echo "  2. Or check what's using it:"
+        echo "     docker network inspect $conflicts"
+        echo ""
+        print_error "Setup aborted due to subnet conflict!"
+        exit 1
     fi
 
     # Create network
@@ -181,7 +222,16 @@ create_network() {
         print_success "Created network: $name ($subnet) $([ "$internal" == "true" ] && echo "[INTERNAL]")"
     else
         print_error "Failed to create network: $name"
-        return 1
+        echo ""
+        echo "  This might be due to:"
+        echo "  - Docker daemon issues"
+        echo "  - Permission problems"
+        echo "  - Invalid subnet format"
+        echo ""
+        echo "  Try running: docker network create --subnet=$subnet $name"
+        echo ""
+        print_error "Setup aborted due to network creation failure!"
+        exit 1
     fi
 }
 
