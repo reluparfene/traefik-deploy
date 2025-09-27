@@ -193,10 +193,9 @@ if [ -f .env ]; then
     fi
 
 else
-    print_error ".env file not found"
+    print_warning ".env file not found (will be configured during setup)"
     if [ -f .env.example ]; then
         print_info "Template found: .env.example"
-        echo "  Run: cp .env.example .env && nano .env"
     fi
 fi
 
