@@ -5,7 +5,7 @@
 
 # API and Dashboard
 api:
-  dashboard: ${TRAEFIK_DASHBOARD_ENABLED:-true}
+  dashboard: ${TRAEFIK_DASHBOARD_ENABLED}
   debug: false
 
 # Entry Points
@@ -23,7 +23,7 @@ entryPoints:
     address: :443
     http:
       tls:
-        certResolver: ${CERT_RESOLVER:-le-dns}
+        certResolver: le-dns
         domains:
           - main: "${DOMAIN}"
             sans:
@@ -50,21 +50,21 @@ certificatesResolvers:
       storage: /acme.json
       keyType: EC384
       dnsChallenge:
-        provider: ${DNS_PROVIDER:-cloudns}
+        provider: cloudns
         # Use provider-specific DNS servers with Quad9 fallback
         # ClouDNS servers are faster for ClouDNS-hosted domains
         resolvers:
-          - "${DNS_RESOLVERS:-pns31.cloudns.net:53,pns32.cloudns.net:53,pns33.cloudns.net:53,pns34.cloudns.net:53}"
-          - "${DNS_RESOLVERS_FALLBACK:-9.9.9.9:53,149.112.112.112:53}"
+          - "${DNS_RESOLVERS}"
+          - "${DNS_RESOLVERS_FALLBACK}"
         # Delay helps with DNS propagation issues
-        delayBeforeCheck: ${DNS_CHECK_DELAY:-30}
+        delayBeforeCheck: ${DNS_CHECK_DELAY}
 
 # Logging
 # By default, logs go to stdout (docker logs)
 # Uncomment filePath to save logs to file
 log:
-  level: ${TRAEFIK_LOG_LEVEL:-INFO}
-  format: ${TRAEFIK_LOG_FORMAT:-json}
+  level: ${TRAEFIK_LOG_LEVEL}
+  format: ${TRAEFIK_LOG_FORMAT}
   # filePath: /traefik.log  # Uncomment to save logs to file
 
 # Access Logs
@@ -72,7 +72,7 @@ log:
 # Warning: Access logs can grow quickly in production
 # Consider using log rotation or external log management
 # accessLog:
-#   format: ${TRAEFIK_ACCESS_LOG_FORMAT:-json}
+#   format: json
 #   filePath: /access.log
 #   bufferingSize: 100
 #   filters:
