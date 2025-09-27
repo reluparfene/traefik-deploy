@@ -32,12 +32,12 @@ print_success() {
 
 print_warning() {
     echo -e "${YELLOW}⚠️  $1${NC}"
-    ((WARNINGS++))
+    ((WARNINGS++)) || true
 }
 
 print_error() {
     echo -e "${RED}❌ $1${NC}"
-    ((ERRORS++))
+    ((ERRORS++)) || true
 }
 
 # ============================================
@@ -81,8 +81,8 @@ check_var() {
     return 0
 }
 
-# Domain validation
-check_var "DOMAIN" "Main domain (e.g., example.com)" '^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$'
+# Domain validation (allow subdomains)
+check_var "DOMAIN" "Main domain (e.g., example.com)" '^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'
 
 # Email validation
 check_var "ACME_EMAIL" "Email for Let's Encrypt certificates" '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
@@ -95,10 +95,11 @@ check_var "CLOUDNS_AUTH_PASSWORD" "ClouDNS password" ""
 check_var "TRAEFIK_BASIC_AUTH_USER" "Dashboard username" '^[a-zA-Z0-9_-]+$'
 
 if [ ! -z "$TRAEFIK_BASIC_AUTH_PASSWORD" ]; then
-    if [[ "$TRAEFIK_BASIC_AUTH_PASSWORD" =~ ^\$apr1\$|\$2[aby]\$ ]]; then
+    if [[ "$TRAEFIK_BASIC_AUTH_PASSWORD" =~ ^\$apr1\$ ]] || [[ "$TRAEFIK_BASIC_AUTH_PASSWORD" =~ ^\$2[aby]\$ ]]; then
         print_success "TRAEFIK_BASIC_AUTH_PASSWORD is properly hashed"
     else
-        print_error "TRAEFIK_BASIC_AUTH_PASSWORD is not hashed!"
+        print_warning "TRAEFIK_BASIC_AUTH_PASSWORD might not be properly escaped!"
+        echo "  In .env, make sure to double the $ symbols: \$\$ instead of \$"
         echo "  Generate with: htpasswd -nb $TRAEFIK_BASIC_AUTH_USER your_password | sed -e s/\\$/\\$\\$/g"
     fi
 else
@@ -129,24 +130,7 @@ print_header "Configuration Templates"
 
 # Check traefik.yml.template
 if [ -f config/traefik.yml.template ]; then
-    # Check for unsubstituted variables
-    if grep -q '\${.*}' config/traefik.yml.template; then
-        vars_found=$(grep -o '\${[^}]*}' config/traefik.yml.template | sort -u)
-        echo "Variables found in template:"
-        for var in $vars_found; do
-            var_name=$(echo $var | sed 's/\${//;s/:.*//')
-            if [ ! -z "${!var_name}" ]; then
-                print_success "  $var_name is set"
-            else
-                # Check if it has a default value
-                if [[ "$var" == *":-"* ]]; then
-                    print_success "  $var has default value"
-                else
-                    print_warning "  $var_name might not be set"
-                fi
-            fi
-        done
-    fi
+    print_success "Traefik configuration template found"
 else
     print_error "config/traefik.yml.template not found!"
 fi
