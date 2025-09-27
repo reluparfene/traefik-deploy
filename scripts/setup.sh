@@ -398,9 +398,20 @@ if [ -f config/traefik.yml.template ]; then
     print_success "Configuration processed"
 fi
 
-# Copy dynamic configs
+# Process and copy dynamic configs
 if [ -d config/dynamic ]; then
-    cp -r config/dynamic/* data/configurations/ 2>/dev/null || true
+    # Process middlewares.yml with envsubst
+    if [ -f config/dynamic/middlewares.yml ]; then
+        envsubst < config/dynamic/middlewares.yml > data/configurations/middlewares.yml
+        print_success "Middlewares configuration processed"
+    fi
+
+    # Copy any other dynamic configs
+    for file in config/dynamic/*.yml; do
+        if [ -f "$file" ] && [ "$(basename $file)" != "middlewares.yml" ]; then
+            cp "$file" data/configurations/ 2>/dev/null || true
+        fi
+    done
     print_success "Dynamic configurations copied"
 fi
 

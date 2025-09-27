@@ -30,8 +30,8 @@ http:
     # Rate Limiting - Default
     rate-limit:
       rateLimit:
-        average: ${RATE_LIMIT_AVERAGE:-100}
-        burst: ${RATE_LIMIT_BURST:-50}
+        average: ${RATE_LIMIT_AVERAGE}
+        burst: ${RATE_LIMIT_BURST}
         sourceCriterion:
           ipStrategy:
             depth: 2
