@@ -64,20 +64,8 @@ if [ ! -f "docker-compose.yml" ]; then
     exit 1
 fi
 
-# Run pre-flight checks first (system level checks)
-if [ -f "$SCRIPT_DIR/preflight-check.sh" ]; then
-    print_warning "Running system pre-flight checks..."
-    if ! "$SCRIPT_DIR/preflight-check.sh"; then
-        print_error "Pre-flight checks failed!"
-        echo ""
-        echo "Fix the system errors above and run setup.sh again."
-        exit 1
-    fi
-    print_success "System checks passed"
-fi
-
 # ============================================
-# STEP 1: Handle configuration
+# STEP 1: Handle configuration FIRST
 # ============================================
 print_header "Configuration Setup"
 
@@ -253,7 +241,23 @@ else
     print_success ".env file found (local)"
 fi
 
-# Run configuration validator after .env is ensured to exist
+# Load environment first
+source .env
+print_success "Environment loaded"
+
+# Run pre-flight system checks
+if [ -f "$SCRIPT_DIR/preflight-check.sh" ]; then
+    print_warning "Running system pre-flight checks..."
+    if ! "$SCRIPT_DIR/preflight-check.sh"; then
+        print_error "Pre-flight checks failed!"
+        echo ""
+        echo "Fix the system errors above and run setup.sh again."
+        exit 1
+    fi
+    print_success "System checks passed"
+fi
+
+# Run configuration validator
 if [ -f "$SCRIPT_DIR/validate-config.sh" ]; then
     print_warning "Validating configuration..."
     if ! "$SCRIPT_DIR/validate-config.sh"; then
@@ -264,10 +268,6 @@ if [ -f "$SCRIPT_DIR/validate-config.sh" ]; then
     fi
     print_success "Configuration is valid"
 fi
-
-# Load environment (validation already done by validate-config.sh)
-source .env
-print_success "Environment loaded"
 
 # ============================================
 # STEP 3: Create Docker networks
