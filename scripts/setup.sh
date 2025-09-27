@@ -395,6 +395,24 @@ if [ -f config/traefik.yml.template ]; then
         sed -i "s/\${TRAEFIK_DASHBOARD_ENABLED:-true}/true/g" data/traefik.yml
     fi
 
+    # Fix DNS resolvers format (convert comma-separated to YAML list)
+    if [ ! -z "$DNS_RESOLVERS" ]; then
+        # Create the YAML list format for resolvers
+        RESOLVERS_YAML=""
+        IFS=',' read -ra RESOLVERS <<< "$DNS_RESOLVERS"
+        for resolver in "${RESOLVERS[@]}"; do
+            RESOLVERS_YAML="${RESOLVERS_YAML}          - \"${resolver}\"\n"
+        done
+        # Replace the single line with the YAML list
+        sed -i "/- \"${DNS_RESOLVERS}\"/d" data/traefik.yml
+        sed -i "/resolvers:/a\\${RESOLVERS_YAML}" data/traefik.yml
+    fi
+
+    # Remove DNS_RESOLVERS_FALLBACK if it exists (we don't want fallback)
+    if grep -q "DNS_RESOLVERS_FALLBACK" data/traefik.yml; then
+        sed -i "/- \".*DNS_RESOLVERS_FALLBACK.*\"/d" data/traefik.yml
+    fi
+
     print_success "Configuration processed"
 fi
 

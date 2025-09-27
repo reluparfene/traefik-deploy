@@ -51,11 +51,10 @@ certificatesResolvers:
       keyType: EC384
       dnsChallenge:
         provider: cloudns
-        # Use provider-specific DNS servers with Quad9 fallback
+        # Use provider-specific DNS servers
         # ClouDNS servers are faster for ClouDNS-hosted domains
         resolvers:
           - "${DNS_RESOLVERS}"
-          - "${DNS_RESOLVERS_FALLBACK}"
         # Delay helps with DNS propagation issues
         delayBeforeCheck: ${DNS_CHECK_DELAY}
 
