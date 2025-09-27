@@ -34,12 +34,12 @@ print_success() {
 
 print_warning() {
     echo -e "${YELLOW}⚠️  $1${NC}"
-    ((WARNINGS++))
+    ((WARNINGS++)) || true
 }
 
 print_error() {
     echo -e "${RED}❌ $1${NC}"
-    ((ERRORS++))
+    ((ERRORS++)) || true
 }
 
 print_info() {
@@ -163,8 +163,8 @@ if [ -f .env ]; then
                     ;;
                 DOMAIN)
                     print_success "$var = ${!var}"
-                    # Check domain format
-                    if [[ ! "${!var}" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$ ]]; then
+                    # Check domain format (allow subdomains)
+                    if [[ ! "${!var}" =~ ^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$ ]]; then
                         print_warning "  Domain format might be invalid"
                     fi
                     ;;
@@ -184,11 +184,12 @@ if [ -f .env ]; then
 
     # Check htpasswd format
     if [ ! -z "$TRAEFIK_BASIC_AUTH_PASSWORD" ]; then
-        if [[ "$TRAEFIK_BASIC_AUTH_PASSWORD" =~ ^\$apr1\$|\$2[aby]\$ ]]; then
+        if [[ "$TRAEFIK_BASIC_AUTH_PASSWORD" =~ ^\$apr1\$ ]] || [[ "$TRAEFIK_BASIC_AUTH_PASSWORD" =~ ^\$2[aby]\$ ]]; then
             print_success "Password is properly hashed"
         else
-            print_error "Password is not hashed with htpasswd"
-            echo "  Generate with: htpasswd -nb $TRAEFIK_BASIC_AUTH_USER yourpassword"
+            print_warning "Password might not be properly escaped in .env"
+            echo "  Make sure to double the $ symbols: \$\$ instead of \$"
+            echo "  Generate with: htpasswd -nb $TRAEFIK_BASIC_AUTH_USER yourpassword | sed -e s/\\\$/\\\$\\\$/g"
         fi
     fi
 
