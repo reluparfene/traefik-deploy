@@ -3,7 +3,7 @@
 ## [1.0.0] - Template Release
 
 ### Added
-- Complete Traefik v3.2 template with automated setup
+- Complete Traefik v3.5 template with automated setup
 - Network segmentation with 4-tier architecture
 - Automated setup script (`scripts/setup.sh`)
 - Environment-based configuration (`.env.example`)

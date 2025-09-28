@@ -38,7 +38,7 @@ Repository-ul este construit pe principiile:
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
-│         Traefik v3.2                │
+│         Traefik v3.5                │
 │  (Reverse Proxy & Load Balancer)    │
 └──────────────┬──────────────────────┘
                │
@@ -164,7 +164,7 @@ data/
 ```yaml
 services:
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.5
     container_name: traefik-proxy
     restart: unless-stopped
     security_opt:

@@ -1,6 +1,6 @@
 # 🚀 Traefik Template - Production-Ready Reverse Proxy
 
-A comprehensive, security-focused Traefik v3.2 template with automated setup, network segmentation, and best practices built-in.
+A comprehensive, security-focused Traefik v3.5 template with automated setup, network segmentation, and best practices built-in.
 
 ## ✨ Features
 
@@ -306,7 +306,7 @@ MIT License - See LICENSE file
 
 ## 🏆 Credits
 
-Built with ❤️ using Traefik v3.2
+Built with ❤️ using Traefik v3.5
 
 ---
 

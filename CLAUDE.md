@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a production-ready Traefik v3.2 template repository with automated setup, network segmentation, and security best practices. It is designed exclusively as a reusable template for new Traefik installations, not as a working deployment.
+This is a production-ready Traefik v3.5 template repository with automated setup, network segmentation, and security best practices. It is designed exclusively as a reusable template for new Traefik installations, not as a working deployment.
 
 ## Key Architecture
 

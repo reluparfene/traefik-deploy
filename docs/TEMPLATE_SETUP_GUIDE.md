@@ -113,7 +113,7 @@ git commit -m "Initial template commit"
 1. Go to https://github.com/new
 2. Fill in:
    - **Repository name**: `traefik-template`
-   - **Description**: "Production-ready Traefik v3.2 template with automated setup, network segmentation, and security best practices"
+   - **Description**: "Production-ready Traefik v3.5 template with automated setup, network segmentation, and security best practices"
    - **Public** (so others can use it) or **Private** (only for you)
    - ❌ **DON'T** initialize with README (we have one)
    - ❌ **DON'T** add .gitignore (we have one)
