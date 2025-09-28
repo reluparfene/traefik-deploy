@@ -103,9 +103,9 @@ services:
 
 ## Implementation Steps
 
-1. **Run setup script**:
+1. **Networks are created automatically during setup**:
 ```bash
-./scripts/setup-network-segmentation.sh
+./scripts/setup.sh
 ```
 
 2. **Update service configurations**:

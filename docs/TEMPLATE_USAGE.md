@@ -212,7 +212,7 @@ docker-compose restart traefik
 ### Network Issues
 ```bash
 # Recreate networks
-./scripts/setup-network-segmentation.sh
+./scripts/setup.sh  # networks are created automatically
 # Restart everything
 docker-compose down
 docker-compose up -d

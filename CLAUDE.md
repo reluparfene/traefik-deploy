@@ -52,8 +52,8 @@ nano .env  # Edit with your actual values
 
 ### Network Setup
 ```bash
-# Create segmented networks
-./scripts/setup-network-segmentation.sh
+# Networks are created automatically by setup.sh
+./scripts/setup.sh
 
 # Check network status
 docker network ls | grep -E "traefik|frontend|backend|management"
@@ -106,7 +106,6 @@ traefik/
 │   ├── preflight-check.sh # System requirements validation
 │   ├── validate-config.sh # Configuration validation
 │   ├── check-networks.sh # Pre-check network availability
-│   ├── create-networks-simple.sh # Network creation helper
 │   ├── setup-networks-safe.sh # Safe network setup
 │   ├── save-config.sh   # Configuration backup helper
 │   └── update-from-template.sh # Template update helper

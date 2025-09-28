@@ -278,7 +278,7 @@ git merge template/main -m "Update from template: network fixes"
 
 # Test locally
 docker-compose config  # validate configuration
-./scripts/create-networks-simple.sh  # test the fix
+./scripts/setup.sh  # networks are created automatically
 
 # If all good, push
 git push origin main

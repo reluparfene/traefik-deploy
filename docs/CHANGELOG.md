@@ -39,7 +39,7 @@
 
 ### Scripts
 - `setup.sh` - Main automated setup
-- `setup-network-segmentation.sh` - Network creation
+- Network creation integrated in `setup.sh`
 - `create-networks.sh` - Legacy network setup
 
 ### Documentation

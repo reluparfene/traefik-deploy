@@ -123,7 +123,6 @@ traefik/
 │   ├── validate-config.sh       # Validare configurație
 │   ├── check-networks.sh        # Verificare disponibilitate subnets
 │   ├── setup-networks-safe.sh   # Creare safe networks cu fallback
-│   ├── create-networks-simple.sh # Creare simplă networks
 │   ├── save-config.sh           # Backup configurație
 │   └── update-from-template.sh  # Update din upstream template
 │
