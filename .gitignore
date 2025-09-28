@@ -23,6 +23,10 @@ traefik.log
 *.old
 backups/
 
+# Certificate backups (sensitive data)
+cert_backup/*
+!cert_backup/.gitkeep
+
 # OS generated files
 .DS_Store
 Thumbs.db
