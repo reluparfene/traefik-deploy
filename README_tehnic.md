@@ -123,7 +123,6 @@ traefik/
 │   ├── validate-config.sh       # Validare configurație
 │   ├── check-networks.sh        # Verificare disponibilitate subnets
 │   ├── setup-networks-safe.sh   # Creare safe networks cu fallback
-│   └── update-from-template.sh  # Update din upstream template
 │
 ├── examples/                     # Exemple de servicii
 │   ├── wordpress/               # WordPress + MariaDB
@@ -946,7 +945,8 @@ git pull origin main
 grep -i breaking docs/CHANGELOG.md
 
 # Run update script
-./scripts/update-from-template.sh
+# Actualizări se fac direct cu git pull din traefik-deploy
+git pull origin main
 
 # Restart services
 docker-compose down

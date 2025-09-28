@@ -13,7 +13,6 @@ setup.sh (Main Entry Point)
 └── (creates networks internally)
 
 backup-cert.sh ←→ restore-cert.sh (Certificate Management)
-update-from-template.sh (Standalone Template Updates)
 setup-networks-safe.sh (Alternative Network Creation)
 ```
 
@@ -173,32 +172,6 @@ setup-networks-safe.sh (Alternative Network Creation)
 
 ---
 
-## 🔧 Utility Scripts
-
-### **update-from-template.sh**
-**Purpose**: Update from upstream template repository
-
-**Location**: `/scripts/update-from-template.sh`
-
-**Usage**:
-```bash
-./scripts/update-from-template.sh
-```
-
-**Features**:
-- Fetches latest template changes
-- Preserves local configuration
-- Handles merge conflicts
-- Shows change summary
-
-**Workflow**:
-1. Adds template repository as remote
-2. Fetches latest changes
-3. Merges template updates
-4. Preserves `.env` and local customizations
-
----
-
 ## 🌐 Network Management Scripts
 
 ### **check-networks.sh**
@@ -292,10 +265,12 @@ echo "0 2 * * * /opt/traefik/scripts/backup-cert.sh" | crontab -
 # Follow interactive prompts
 ```
 
-### Update from Template
+### Update from Repository
 ```bash
-./scripts/update-from-template.sh
+# Pull latest changes directly from traefik-deploy
+git pull origin main
 docker-compose down
+docker-compose pull
 docker-compose up -d
 ```
 

@@ -115,7 +115,6 @@ traefik/
 │   ├── setup-networks-safe.sh # Safe network setup
 │   ├── backup-cert.sh   # Certificate backup with rotation
 │   ├── restore-cert.sh  # Interactive certificate restoration
-│   └── update-from-template.sh # Template update helper
 ├── cert_backup/         # Certificate backups directory
 │   └── .gitkeep        # Keeps directory in git
 ├── examples/            # Service examples
