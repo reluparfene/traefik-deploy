@@ -420,7 +420,16 @@ fi
 if [ -d config/dynamic ]; then
     # Process middlewares.yml with envsubst
     if [ -f config/dynamic/middlewares.yml ]; then
+        # Process with envsubst
         envsubst < config/dynamic/middlewares.yml > data/configurations/middlewares.yml
+
+        # Fix password if it contains DOLLAR placeholder
+        # This allows users to use DOLLAR instead of $$ to avoid shell expansion issues
+        if grep -q "DOLLAR" data/configurations/middlewares.yml; then
+            sed -i 's/DOLLAR/$/g' data/configurations/middlewares.yml
+            print_success "Converted DOLLAR placeholders to $ in password"
+        fi
+
         print_success "Middlewares configuration processed"
     fi
 
