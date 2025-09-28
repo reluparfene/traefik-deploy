@@ -13,7 +13,6 @@ setup.sh (Main Entry Point)
 └── (creates networks internally)
 
 backup-cert.sh ←→ restore-cert.sh (Certificate Management)
-save-config.sh (Standalone Config Backup)
 update-from-template.sh (Standalone Template Updates)
 setup-networks-safe.sh (Alternative Network Creation)
 ```
@@ -176,29 +175,6 @@ setup-networks-safe.sh (Alternative Network Creation)
 
 ## 🔧 Utility Scripts
 
-### **save-config.sh**
-**Purpose**: Save current configuration to Git repository
-
-**Location**: `/scripts/save-config.sh`
-
-**Usage**:
-```bash
-./scripts/save-config.sh "commit message"
-```
-
-**Features**:
-- Commits current `.env` to Git
-- Creates backup branch
-- Pushes to remote repository
-- Useful for configuration versioning
-
-**Example**:
-```bash
-./scripts/save-config.sh "Update DNS resolvers"
-```
-
----
-
 ### **update-from-template.sh**
 **Purpose**: Update from upstream template repository
 
@@ -323,9 +299,11 @@ docker-compose down
 docker-compose up -d
 ```
 
-### Save Configuration
+### Configuration Management
 ```bash
-./scripts/save-config.sh "Description of changes"
+# Configuration is stored in separate traefik-configs repository
+# Located at: /opt/traefik-configs/.env
+# This keeps credentials separate from code
 ```
 
 ---

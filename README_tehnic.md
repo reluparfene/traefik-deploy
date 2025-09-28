@@ -123,7 +123,6 @@ traefik/
 │   ├── validate-config.sh       # Validare configurație
 │   ├── check-networks.sh        # Verificare disponibilitate subnets
 │   ├── setup-networks-safe.sh   # Creare safe networks cu fallback
-│   ├── save-config.sh           # Backup configurație
 │   └── update-from-template.sh  # Update din upstream template
 │
 ├── examples/                     # Exemple de servicii
@@ -938,7 +937,7 @@ metrics:
 
 ```bash
 # Backup current configuration
-./scripts/save-config.sh
+# Configurația se salvează în repo-ul separat traefik-configs
 
 # Pull latest changes
 git pull origin main

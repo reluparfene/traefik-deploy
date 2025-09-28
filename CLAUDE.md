@@ -75,6 +75,12 @@ docker-compose down
 
 ### Certificate Management
 ```bash
+# Backup certificates (manual)
+./scripts/backup-cert.sh
+
+# Restore certificates (interactive)
+./scripts/restore-cert.sh
+
 # Check certificate status
 docker exec traefik-proxy cat /acme.json | jq .
 
@@ -107,14 +113,19 @@ traefik/
 │   ├── validate-config.sh # Configuration validation
 │   ├── check-networks.sh # Pre-check network availability
 │   ├── setup-networks-safe.sh # Safe network setup
-│   ├── save-config.sh   # Configuration backup helper
+│   ├── backup-cert.sh   # Certificate backup with rotation
+│   ├── restore-cert.sh  # Interactive certificate restoration
 │   └── update-from-template.sh # Template update helper
+├── cert_backup/         # Certificate backups directory
+│   └── .gitkeep        # Keeps directory in git
 ├── examples/            # Service examples
 │   ├── wordpress/
 │   ├── nextcloud/
 │   └── portainer/
 └── docs/               # Documentation
-    └── NETWORK_SEGMENTATION.md
+    ├── NETWORK_SEGMENTATION.md
+    ├── SCRIPTS.md       # Complete scripts documentation
+    └── [other docs...]
 ```
 
 ## Adding New Services
@@ -226,3 +237,113 @@ This repository is a template only - it requires configuration before use:
 - The `.env` file must be created from `.env.example`
 - Networks must be created before first deployment
 - See `examples/` directory for service integration patterns
+
+## Version Information
+
+- **Current Traefik Version**: v3.5
+- **Minimum Docker Version**: 20.10.0
+- **Docker Compose Version**: v2 recommended
+- **Tested on**: Ubuntu 22.04, Debian 11/12
+
+## Production Deployment Workflow
+
+### For Production Servers
+```bash
+# 1. Pull latest changes
+git pull
+
+# 2. Stop services
+docker-compose down
+
+# 3. Update Docker images
+docker-compose pull
+
+# 4. Start services
+docker-compose up -d
+
+# 5. Verify deployment
+docker logs -f traefik-proxy --tail 100
+```
+
+### Rollback Procedure
+```bash
+# If issues occur after update
+git log --oneline -5  # Find previous commit
+git checkout <commit-hash>
+docker-compose down
+docker-compose up -d
+```
+
+## Common Issues and Solutions
+
+### DNS Resolution Issues
+- **Problem**: "could not find zone for domain"
+- **Solution**: Verify DNS_RESOLVERS match your ClouDNS nameservers
+- **Check**: `nslookup -type=NS yourdomain.com`
+
+### Certificate Generation Fails
+- **Problem**: ACME challenge fails
+- **Solution**:
+  - Check ClouDNS API credentials
+  - Ensure domain NS records point to ClouDNS
+  - Increase DNS_CHECK_DELAY if needed
+
+### Port Conflicts
+- **Problem**: "bind: address already in use"
+- **Solution**:
+  ```bash
+  # Find process using the port
+  sudo netstat -tulpn | grep :80
+  sudo netstat -tulpn | grep :443
+  # Stop conflicting service or change Traefik ports
+  ```
+
+## Repository Maintenance
+
+### Keeping Template Updated
+```bash
+# Add upstream remote (once)
+git remote add upstream https://github.com/reluparfene/traefik-deploy.git
+
+# Fetch and merge updates
+git fetch upstream
+git merge upstream/main --allow-unrelated-histories
+```
+
+### Configuration Backup Strategy
+```bash
+# Configuration is stored in separate traefik-configs repository
+# Located at: /opt/traefik-configs/.env
+# This keeps credentials separate from code
+
+# Certificate backup
+./scripts/backup-cert.sh
+```
+
+## Important Files to Never Commit
+
+These files contain sensitive data and should NEVER be in version control:
+- `.env` (except in private deployment repos)
+- `data/acme.json` (certificates with private keys)
+- `cert_backup/*.json` (certificate backups)
+- Any file with passwords, tokens, or API keys
+
+## Development vs Production
+
+### Development Mode
+- Can use self-signed certificates
+- Debug logging enabled
+- Dashboard accessible without auth (for testing)
+
+### Production Mode (default)
+- Let's Encrypt certificates via DNS challenge
+- Error/warn logging only
+- Dashboard requires authentication
+- All security middlewares enabled
+
+## Support and Resources
+
+- **Documentation**: See `/docs/` directory
+- **Examples**: Check `/examples/` for service configurations
+- **Issues**: Report at github.com/reluparfene/traefik-deploy/issues
+- **Traefik Docs**: https://doc.traefik.io/traefik/
