@@ -8,14 +8,14 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
     networks:
-      - app-frontend
-      - management
+      - traefik-frontend
+      - traefik-management
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-frontend"
+      - "traefik.docker.network=traefik-frontend"
 
       # HTTP Router
       - "traefik.http.routers.portainer.entrypoints=web"
@@ -40,10 +40,10 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/volumes:/var/lib/docker/volumes
     networks:
-      - management
+      - traefik-management
     ports:
       - "9001:9001"
 
@@ -51,7 +51,7 @@ volumes:
   portainer_data:
 
 networks:
-  app-frontend:
+  traefik-frontend:
     external: true
-  management:
+  traefik-management:
     external: true

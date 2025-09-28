@@ -86,8 +86,9 @@ if command -v docker-compose &> /dev/null; then
 elif docker compose version &>/dev/null 2>&1; then
     COMPOSE_VERSION=$(docker compose version --short)
     print_success "Docker Compose (plugin) installed: $COMPOSE_VERSION"
-    COMPOSE_CMD="docker compose"
-    COMPOSE_FOUND=true
+    # Variables now used in later checks
+    # COMPOSE_CMD="docker compose"
+    # COMPOSE_FOUND=true
 else
     print_error "Docker Compose is not installed"
     echo "  Install standalone: sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose"
@@ -111,7 +112,8 @@ print_header "Port Availability"
 check_port() {
     local port=$1
     if netstat -tuln 2>/dev/null | grep -q ":$port "; then
-        local process=$(sudo ss -lptn "sport = :$port" 2>/dev/null | grep -oP '(?<=").*?(?=")')
+        local process
+        process=$(sudo ss -lptn "sport = :$port" 2>/dev/null | grep -oP '(?<=").*?(?=")')
         print_error "Port $port is already in use by: ${process:-unknown}"
         return 1
     else

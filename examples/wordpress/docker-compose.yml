@@ -13,11 +13,11 @@ services:
     volumes:
       - wordpress_data:/var/www/html
     networks:
-      - app-frontend
-      - db-backend
+      - traefik-frontend
+      - traefik-backend
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-frontend"
+      - "traefik.docker.network=traefik-frontend"
 
       # HTTP Router
       - "traefik.http.routers.wordpress.entrypoints=web"
@@ -46,14 +46,14 @@ services:
     volumes:
       - wordpress_db:/var/lib/mysql
     networks:
-      - db-backend
+      - traefik-backend
 
 volumes:
   wordpress_data:
   wordpress_db:
 
 networks:
-  app-frontend:
+  traefik-frontend:
     external: true
-  db-backend:
+  traefik-backend:
     external: true

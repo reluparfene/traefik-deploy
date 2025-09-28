@@ -18,11 +18,11 @@ services:
     volumes:
       - nextcloud_data:/var/www/html
     networks:
-      - app-frontend
-      - db-backend
+      - traefik-frontend
+      - traefik-backend
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=app-frontend"
+      - "traefik.docker.network=traefik-frontend"
 
       # HTTP Router
       - "traefik.http.routers.nextcloud.entrypoints=web"
@@ -55,7 +55,7 @@ services:
     volumes:
       - nextcloud_db:/var/lib/postgresql/data
     networks:
-      - db-backend
+      - traefik-backend
 
   nextcloud-redis:
     image: redis:7-alpine
@@ -63,14 +63,14 @@ services:
     restart: unless-stopped
     command: redis-server --requirepass ${NC_REDIS_PASSWORD:-changeme}
     networks:
-      - db-backend
+      - traefik-backend
 
 volumes:
   nextcloud_data:
   nextcloud_db:
 
 networks:
-  app-frontend:
+  traefik-frontend:
     external: true
-  db-backend:
+  traefik-backend:
     external: true

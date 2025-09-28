@@ -41,7 +41,8 @@ get_used_subnets() {
 # Check if subnet is available
 is_subnet_available() {
     local subnet=$1
-    local used_subnets=$(get_used_subnets)
+    local used_subnets
+    used_subnets=$(get_used_subnets)
 
     # Check exact match
     if echo "$used_subnets" | grep -q "^${subnet}$"; then
@@ -68,7 +69,7 @@ print_header "Docker Network Configuration Check"
 echo "Current Docker networks using 172.x.x.x space:"
 echo ""
 
-docker network ls -q | while read net_id; do
+docker network ls -q | while read -r net_id; do
     name=$(docker network inspect -f '{{.Name}}' "$net_id" 2>/dev/null)
     subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$net_id" 2>/dev/null)
     if [[ "$subnet" == 172.* ]]; then

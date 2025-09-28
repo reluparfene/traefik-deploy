@@ -34,19 +34,18 @@ This is a production-ready Traefik v3.2 template repository with automated setup
 
 ### Initial Setup (required before first use)
 ```bash
-# 1. Copy and configure environment
+# Option 1: Automatic setup with standard configuration
+./scripts/setup.sh
+# Will auto-detect config from /opt/traefik-configs/.env if available
+
+# Option 2: Manual setup with custom configuration
 cp .env.example .env
-nano .env  # MUST edit with your actual values
-
-# 2. Check network availability (optional but recommended)
-./scripts/check-networks.sh
-# If conflicts detected, update .env with suggested subnets
-
-# 3. Run automated setup
+nano .env  # Edit with your actual values
 ./scripts/setup.sh
 
-# 4. Deploy Traefik
-docker-compose up -d
+# Option 3: Setup with branch-specific configuration
+./scripts/setup.sh branch-name
+# Will clone config from github.com/reluparfene/traefik-configs.git
 ```
 
 **Note**: This template will NOT work without configuration. All placeholder values must be replaced.
@@ -103,10 +102,14 @@ traefik/
 │   ├── acme.json         # SSL certificates
 │   └── configurations/   # Dynamic configs
 ├── scripts/              # Automation scripts
-│   ├── setup.sh         # Main setup script
+│   ├── setup.sh         # Main setup script (single entry point)
+│   ├── preflight-check.sh # System requirements validation
+│   ├── validate-config.sh # Configuration validation
 │   ├── check-networks.sh # Pre-check network availability
-│   ├── setup-network-segmentation.sh
-│   └── create-networks.sh
+│   ├── create-networks-simple.sh # Network creation helper
+│   ├── setup-networks-safe.sh # Safe network setup
+│   ├── save-config.sh   # Configuration backup helper
+│   └── update-from-template.sh # Template update helper
 ├── examples/            # Service examples
 │   ├── wordpress/
 │   ├── nextcloud/
@@ -158,11 +161,18 @@ Key variables to configure:
 - `ACME_EMAIL` - Email for Let's Encrypt
 - `CLOUDNS_SUB_AUTH_ID` - ClouDNS authentication
 - `CLOUDNS_AUTH_PASSWORD` - ClouDNS password
-- `DNS_RESOLVERS` - DNS servers for ACME challenge (default: ClouDNS servers)
-- `DNS_RESOLVERS_FALLBACK` - Fallback DNS servers (default: Quad9)
+- `DNS_RESOLVERS` - DNS servers for ACME challenge (ClouDNS servers format: "server1:53,server2:53")
 - `DNS_CHECK_DELAY` - Delay before DNS check in seconds (default: 30)
 - `TRAEFIK_BASIC_AUTH_USER` - Dashboard username
-- `TRAEFIK_BASIC_AUTH_PASSWORD` - Dashboard password (htpasswd format)
+- `TRAEFIK_BASIC_AUTH_PASSWORD` - Dashboard password (htpasswd format with DOLLAR placeholder)
+
+### Password Generation
+```bash
+# Generate password with DOLLAR placeholder to avoid shell expansion issues
+htpasswd -nb admin your_password | sed 's/\$/DOLLAR/g'
+# Example result: DOLLARapr1DOLLARxxxDOLLARyyyyyy
+# The setup.sh script will convert DOLLAR back to $ during processing
+```
 
 ## Security Considerations
 

@@ -83,18 +83,23 @@ ping:
   entryPoint: traefik
   manualRouting: false
 
-# Metrics (Optional)
-metrics:
-  prometheus:
-    entryPoint: metrics
-    addEntryPointsLabels: true
-    addRoutersLabels: true
-    addServicesLabels: true
-    buckets:
-      - 0.1
-      - 0.3
-      - 1.2
-      - 5.0
+# Metrics (Optional - Recommended for Production)
+# To enable Prometheus metrics:
+# 1. Add metrics entrypoint above (e.g., metrics: { address: :8082 })
+# 2. Uncomment the section below
+# 3. Configure Prometheus to scrape http://traefik:8082/metrics
+# Note: Adds ~50MB RAM overhead. For development, use access logs instead.
+# metrics:
+#   prometheus:
+#     entryPoint: metrics
+#     addEntryPointsLabels: true
+#     addRoutersLabels: true
+#     addServicesLabels: true
+#     buckets:
+#       - 0.1
+#       - 0.3
+#       - 1.2
+#       - 5.0
 
 # Security
 serversTransport:
