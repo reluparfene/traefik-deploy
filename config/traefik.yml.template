@@ -29,6 +29,10 @@ entryPoints:
             sans:
               - "*.${DOMAIN}"
 
+  # Metrics endpoint (uncomment to enable Prometheus metrics)
+  # metrics:
+  #   address: :8082
+
 # Providers
 providers:
   docker:
@@ -85,7 +89,7 @@ ping:
 
 # Metrics (Optional - Recommended for Production)
 # To enable Prometheus metrics:
-# 1. Add metrics entrypoint above (e.g., metrics: { address: :8082 })
+# 1. Uncomment the metrics entrypoint above (lines 33-34)
 # 2. Uncomment the section below
 # 3. Configure Prometheus to scrape http://traefik:8082/metrics
 # Note: Adds ~50MB RAM overhead. For development, use access logs instead.
