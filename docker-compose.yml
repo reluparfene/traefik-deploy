@@ -27,13 +27,13 @@ services:
     networks:
       # Public network - for external traffic
       traefik-public:
-        ipv4_address: "172.20.0.2"
+        ipv4_address: "10.240.0.2"
       # Frontend network - to reach application services
       traefik-frontend:
-        ipv4_address: "172.21.0.2"
+        ipv4_address: "10.241.0.2"
       # Management network - for monitoring/admin (optional)
       traefik-management:
-        ipv4_address: "172.23.0.2"
+        ipv4_address: "10.243.0.2"
     labels:
       - "traefik.enable=true"
       # Important: Traefik connects to services via traefik-frontend network

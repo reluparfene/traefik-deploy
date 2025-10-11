@@ -172,13 +172,7 @@ if ! check_command docker "docker.io"; then
     exit 1
 fi
 
-if ! check_command docker-compose "docker-compose" && ! docker compose version >/dev/null 2>&1; then
-    print_error "Neither docker-compose nor 'docker compose' is available!"
-    echo "  Install with: apt-get install docker-compose"
-    exit 1
-fi
-
-print_success "Prerequisites verified"
+print_success "Docker verified"
 
 # Step 2: Check existing networks
 print_header "Existing Docker Networks"
@@ -187,9 +181,9 @@ echo "Current Docker networks:"
 docker network ls --format "table {{.Name}}\t{{.Driver}}\t{{.Scope}}" | head -10
 
 echo ""
-echo "Networks using 172.x.x.x subnets:"
+echo "Networks using private IP ranges (10.x, 172.x, 192.168.x):"
 docker network ls -q | while read net; do
-    subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$net" 2>/dev/null | grep "^172\." || true)
+    subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$net" 2>/dev/null | grep -E "^(10\.|172\.|192\.168\.)" || true)
     if [ ! -z "$subnet" ]; then
         name=$(docker network inspect -f '{{.Name}}' "$net")
         printf "  %-20s %s\n" "$name:" "$subnet"
@@ -202,15 +196,19 @@ print_header "Network Configuration"
 # Load from .env if exists
 if [ -f .env ]; then
     source .env
-    print_success "Loaded configuration from .env"
+    print_warning "Found .env file - using network configuration from .env"
+    echo "  If network subnets in .env are outdated, they will be used instead of defaults!"
+    echo "  Default subnets: 10.240.0.0/24, 10.241.0.0/24, 10.242.0.0/24, 10.243.0.0/24"
+    echo ""
 fi
 
 # Define networks with defaults
+# Using 10.240.x.x range to minimize conflicts with cloud providers, VPNs, and K8s
 NETWORKS=(
-    "traefik-public:${NETWORK_SUBNET_PUBLIC:-172.20.0.0/24}:false:DMZ/Edge network for Traefik"
-    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}:false:Frontend applications"
-    "traefik-backend:${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}:true:Database backend (isolated)"
-    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}:true:Management and monitoring"
+    "traefik-public:${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}:false:DMZ/Edge network for Traefik"
+    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}:false:Frontend applications"
+    "traefik-backend:${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}:true:Database backend (isolated)"
+    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}:true:Management and monitoring"
 )
 
 echo "Planned networks:"

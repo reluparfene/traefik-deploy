@@ -116,10 +116,12 @@ The template implements a secure 4-tier network architecture:
 
 | Network | Subnet | Purpose |
 |---------|--------|---------|
-| traefik-public | 172.20.0.0/24 | External traffic entry |
-| traefik-frontend | 172.21.0.0/24 | Application services |
-| traefik-backend | 172.22.0.0/24 | Databases (isolated) |
-| traefik-management | 172.23.0.0/24 | Monitoring tools |
+| traefik-public | 10.240.0.0/24 | External traffic entry |
+| traefik-frontend | 10.241.0.0/24 | Application services |
+| traefik-backend | 10.242.0.0/24 | Databases (isolated) |
+| traefik-management | 10.243.0.0/24 | Monitoring tools |
+
+**Note**: Uses 10.240.x.x range to avoid conflicts with cloud providers, VPNs, and Kubernetes.
 
 ## 🔒 Security Features
 

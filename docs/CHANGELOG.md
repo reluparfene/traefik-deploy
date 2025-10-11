@@ -26,10 +26,10 @@
 - Configurable DNS propagation delay
 
 ### Network Architecture
-- `traefik-public` (172.20.0.0/24) - DMZ for external traffic
-- `app-frontend` (172.21.0.0/24) - Application services
-- `db-backend` (172.22.0.0/24) - Isolated database tier
-- `management` (172.23.0.0/24) - Monitoring and admin tools
+- `traefik-public` (10.240.0.0/24) - DMZ for external traffic
+- `app-frontend` (10.241.0.0/24) - Application services
+- `db-backend` (10.242.0.0/24) - Isolated database tier
+- `management` (10.243.0.0/24) - Monitoring and admin tools
 
 ### Configuration
 - Template-based configuration system

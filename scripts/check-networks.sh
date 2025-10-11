@@ -86,11 +86,12 @@ if [ -f .env ]; then
 fi
 
 # Define required networks with defaults
+# Using 10.240.x.x range to minimize conflicts with cloud providers, VPNs, and K8s
 NETWORKS=(
-    "traefik-public:${NETWORK_SUBNET_PUBLIC:-172.20.0.0/24}"
-    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}"
-    "traefik-backend:${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}"
-    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}"
+    "traefik-public:${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}"
+    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}"
+    "traefik-backend:${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}"
+    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}"
 )
 
 # Track suggestions

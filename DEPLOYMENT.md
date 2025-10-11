@@ -138,7 +138,7 @@ docker exec traefik-proxy cat /acme.json | jq .
 **Mesaj:**
 ```
 ❌ SUBNET CONFLICT: Cannot create network 'traefik-public'!
-  Subnet 172.20.0.0/24 is already in use by network: other-network
+  Subnet 10.240.0.0/24 is already in use by network: other-network
 ```
 
 **Soluție:**
@@ -199,10 +199,10 @@ chmod 600 data/acme.json
 
 ### Rețele Izolate
 Template-ul creează 4 rețele separate:
-- `traefik-public` (172.20.0.0/24) - Pentru trafic extern
-- `traefik-frontend` (172.21.0.0/24) - Pentru aplicații
-- `traefik-backend` (172.22.0.0/24) - Pentru baze de date (INTERNAL)
-- `traefik-management` (172.23.0.0/24) - Pentru monitoring (INTERNAL)
+- `traefik-public` (10.240.0.0/24) - Pentru trafic extern
+- `traefik-frontend` (10.241.0.0/24) - Pentru aplicații
+- `traefik-backend` (10.242.0.0/24) - Pentru baze de date (INTERNAL)
+- `traefik-management` (10.243.0.0/24) - Pentru monitoring (INTERNAL)
 
 ### Best Practices
 1. **NICIODATĂ** nu expune Docker socket-ul public

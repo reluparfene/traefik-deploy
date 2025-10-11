@@ -213,10 +213,10 @@ setup-networks-safe.sh (Alternative Network Creation)
 - Detailed error reporting
 
 **Networks Created**:
-- `traefik-public` (172.20.0.0/24 or fallback)
-- `traefik-frontend` (172.21.0.0/24 or fallback)
-- `traefik-backend` (172.22.0.0/24 or fallback, internal)
-- `traefik-management` (172.23.0.0/24 or fallback, internal)
+- `traefik-public` (10.240.0.0/24 or fallback)
+- `traefik-frontend` (10.241.0.0/24 or fallback)
+- `traefik-backend` (10.242.0.0/24 or fallback, internal)
+- `traefik-management` (10.243.0.0/24 or fallback, internal)
 
 **Note**: Network creation is normally handled by `setup.sh`. This script provides an alternative for complex scenarios.
 

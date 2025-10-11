@@ -187,11 +187,11 @@ services:
       - ./data/configurations:/configurations         # Dynamic configs
     networks:
       traefik-public:
-        ipv4_address: "172.20.0.2"    # Fixed IP in DMZ
+        ipv4_address: "10.240.0.2"    # Fixed IP in DMZ
       traefik-frontend:
-        ipv4_address: "172.21.0.2"    # Fixed IP in frontend
+        ipv4_address: "10.241.0.2"    # Fixed IP in frontend
       traefik-management:
-        ipv4_address: "172.23.0.2"    # Fixed IP in management
+        ipv4_address: "10.243.0.2"    # Fixed IP in management
 ```
 
 ### **2. Template System**
@@ -237,10 +237,10 @@ ${DNS_CHECK_DELAY}            # Delay before DNS check
 
 ```c
 // Network CIDR blocks
-#define NETWORK_PUBLIC     "172.20.0.0/24"  // 254 hosts
-#define NETWORK_FRONTEND   "172.21.0.0/24"  // 254 hosts
-#define NETWORK_BACKEND    "172.22.0.0/24"  // 254 hosts
-#define NETWORK_MANAGEMENT "172.23.0.0/24"  // 254 hosts
+#define NETWORK_PUBLIC     "10.240.0.0/24"  // 254 hosts
+#define NETWORK_FRONTEND   "10.241.0.0/24"  // 254 hosts
+#define NETWORK_BACKEND    "10.242.0.0/24"  // 254 hosts
+#define NETWORK_MANAGEMENT "10.243.0.0/24"  // 254 hosts
 
 // Reserved IPs
 #define GATEWAY_SUFFIX     ".1"   // Docker gateway

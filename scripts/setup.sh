@@ -311,10 +311,10 @@ create_network() {
         echo "  Subnet $subnet is already in use by network: $conflicts"
         echo ""
         echo "  This template requires the following subnets to be available:"
-        echo "    - 172.20.0.0/24 for traefik-public"
-        echo "    - 172.21.0.0/24 for app-frontend"
-        echo "    - 172.22.0.0/24 for db-backend"
-        echo "    - 172.23.0.0/24 for management"
+        echo "    - 10.240.0.0/24 for traefik-public"
+        echo "    - 10.241.0.0/24 for traefik-frontend"
+        echo "    - 10.242.0.0/24 for traefik-backend"
+        echo "    - 10.243.0.0/24 for traefik-management"
         echo ""
         echo "  Solutions:"
         echo "  1. Remove the conflicting network (if not in use):"
@@ -352,10 +352,11 @@ create_network() {
 }
 
 # Create networks with clear traefik- prefix
-create_network "traefik-public" "${NETWORK_SUBNET_PUBLIC:-172.20.0.0/24}" "false"
-create_network "traefik-frontend" "${NETWORK_SUBNET_FRONTEND:-172.21.0.0/24}" "false"
-create_network "traefik-backend" "${NETWORK_SUBNET_BACKEND:-172.22.0.0/24}" "true"
-create_network "traefik-management" "${NETWORK_SUBNET_MANAGEMENT:-172.23.0.0/24}" "true"
+# Using 10.240.x.x range to minimize conflicts with cloud providers, VPNs, and K8s
+create_network "traefik-public" "${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}" "false"
+create_network "traefik-frontend" "${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}" "false"
+create_network "traefik-backend" "${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}" "true"
+create_network "traefik-management" "${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}" "true"
 
 # ============================================
 # STEP 4: Setup Traefik configuration

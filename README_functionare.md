@@ -200,22 +200,22 @@ Repository-ul creează automat 4 rețele Docker izolate:
 └────────────────┬────────────────────────────┘
                  │
         ┌────────▼────────┐
-        │  traefik-public │ 172.20.0.0/24
+        │  traefik-public │ 10.240.0.0/24
         │   (DMZ/Edge)    │
         └────────┬────────┘
                  │
         ┌────────▼────────┐
-        │traefik-frontend │ 172.21.0.0/24
+        │traefik-frontend │ 10.241.0.0/24
         │  (Applications) │
         └────────┬────────┘
                  │
         ┌────────▼────────┐
-        │ traefik-backend │ 172.22.0.0/24
+        │ traefik-backend │ 10.242.0.0/24
         │   (Databases)   │ (Internal Only)
         └─────────────────┘
 
         ┌─────────────────┐
-        │traefik-management│ 172.23.0.0/24
+        │traefik-management│ 10.243.0.0/24
         │  (Monitoring)    │ (Internal Only)
         └─────────────────┘
 ```

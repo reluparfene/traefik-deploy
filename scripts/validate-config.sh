@@ -118,7 +118,7 @@ for net_var in NETWORK_SUBNET_PUBLIC NETWORK_SUBNET_FRONTEND NETWORK_SUBNET_BACK
             print_success "$net_var: ${!net_var}"
         else
             print_error "$net_var has invalid format: ${!net_var}"
-            echo "  Expected format: 172.20.0.0/24"
+            echo "  Expected format: 10.240.0.0/24"
         fi
     fi
 done

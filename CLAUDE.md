@@ -17,10 +17,12 @@ This is a production-ready Traefik v3.5 template repository with automated setup
 - **Environment Config**: `.env.example` - template for customization
 
 ### Network Segmentation (4-tier architecture)
-- **traefik-public** (172.20.0.0/24) - DMZ/Edge network for external traffic
-- **traefik-frontend** (172.21.0.0/24) - Application services layer
-- **traefik-backend** (172.22.0.0/24) - Isolated database tier (internal only)
-- **traefik-management** (172.23.0.0/24) - Monitoring and admin tools (internal only)
+- **traefik-public** (10.240.0.0/24) - DMZ/Edge network for external traffic
+- **traefik-frontend** (10.241.0.0/24) - Application services layer
+- **traefik-backend** (10.242.0.0/24) - Isolated database tier (internal only)
+- **traefik-management** (10.243.0.0/24) - Monitoring and admin tools (internal only)
+
+**Note**: Using 10.240.x.x range to minimize conflicts with cloud providers (AWS, Azure, GCP), VPN services, and Kubernetes clusters.
 
 ### Security Features
 - Rate limiting middleware (100 req avg, 50 burst)
@@ -160,7 +162,7 @@ http:
     my-app-service:
       loadBalancer:
         servers:
-          - url: "http://172.21.0.50:8080"
+          - url: "http://10.241.0.50:8080"
 ```
 
 ## Environment Variables (.env)
