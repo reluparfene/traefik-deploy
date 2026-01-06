@@ -108,7 +108,3 @@ ping:
 # Security
 serversTransport:
   insecureSkipVerify: false
-
-# Pilot (Optional Traefik Pilot)
-pilot:
-  dashboard: false
