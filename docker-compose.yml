@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v3.6
+    image: traefik:v3.7.5
     container_name: traefik-proxy
     restart: unless-stopped
     security_opt:
@@ -16,6 +16,13 @@ services:
     environment:
       - CLOUDNS_SUB_AUTH_ID=${CLOUDNS_SUB_AUTH_ID}
       - CLOUDNS_AUTH_PASSWORD=${CLOUDNS_AUTH_PASSWORD}
+      # Providerul ClouDNS din lego asteapta ca TXT-ul de provocare sa se
+      # sincronizeze pe toate cele 8 nameservere ale lor inainte de a cere
+      # validarea. Implicit are 180s - insuficient cand se emit mai multe
+      # certificate simultan: pe 2026-08-19, cele 8 domenii autoconfig.* au
+      # esuat toate cu "nameserver sync ... not complete", blocate la 4/8.
+      - CLOUDNS_PROPAGATION_TIMEOUT=900
+      - CLOUDNS_POLLING_INTERVAL=20
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
