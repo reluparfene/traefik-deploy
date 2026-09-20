@@ -111,16 +111,57 @@ fi
 # ============================================
 print_header "Network Configuration"
 
-# Check network subnets format
-for net_var in NETWORK_SUBNET_PUBLIC NETWORK_SUBNET_FRONTEND NETWORK_SUBNET_BACKEND NETWORK_SUBNET_MANAGEMENT; do
-    if [ ! -z "${!net_var}" ]; then
-        if [[ "${!net_var}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
-            print_success "$net_var: ${!net_var}"
-        else
-            print_error "$net_var has invalid format: ${!net_var}"
-            echo "  Expected format: 10.240.0.0/24"
-        fi
+# --- small IPv4 helpers (no external deps) ---
+ip2int() { local IFS=.; read -r a b c d <<< "$1"; echo $(( (a<<24) | (b<<16) | (c<<8) | d )); }
+# in_cidr IP CIDR -> 0 if IP is inside CIDR
+in_cidr() {
+    local ip=$1 cidr=$2 net bits mask
+    net=${cidr%/*}; bits=${cidr#*/}
+    mask=$(( bits == 0 ? 0 : (0xFFFFFFFF << (32 - bits)) & 0xFFFFFFFF ))
+    [ $(( $(ip2int "$ip") & mask )) -eq $(( $(ip2int "$net") & mask )) ]
+}
+is_cidr() { [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; }
+
+# Effective values (defaults must match setup.sh)
+NET_SUBNET_PUBLIC="${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}"
+NET_SUBNET_FRONTEND="${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}"
+NET_SUBNET_BACKEND="${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}"
+NET_SUBNET_MANAGEMENT="${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}"
+NET_IPRANGE_PUBLIC="${NETWORK_IPRANGE_PUBLIC:-10.240.0.128/25}"
+NET_IPRANGE_FRONTEND="${NETWORK_IPRANGE_FRONTEND:-10.241.0.128/25}"
+NET_IPRANGE_BACKEND="${NETWORK_IPRANGE_BACKEND:-10.242.0.128/25}"
+NET_IPRANGE_MANAGEMENT="${NETWORK_IPRANGE_MANAGEMENT:-10.243.0.128/25}"
+
+# Check subnet + ip-range (dynamic pool) for each tier
+for tier in PUBLIC FRONTEND BACKEND MANAGEMENT; do
+    subnet_var="NET_SUBNET_$tier"; iprange_var="NET_IPRANGE_$tier"
+    subnet="${!subnet_var}"; iprange="${!iprange_var}"
+
+    if ! is_cidr "$subnet"; then
+        print_error "NETWORK_SUBNET_$tier has invalid format: $subnet"
+        echo "  Expected format: 10.240.0.0/24"
+        continue
     fi
+    if ! is_cidr "$iprange"; then
+        print_error "NETWORK_IPRANGE_$tier has invalid format: $iprange"
+        echo "  Expected format: 10.240.0.128/25"
+        continue
+    fi
+    # The pool must sit inside the subnet and must not cover it entirely
+    # (otherwise there is no static zone left for Traefik's .2).
+    if ! in_cidr "${iprange%/*}" "$subnet"; then
+        print_error "NETWORK_IPRANGE_$tier ($iprange) is not inside NETWORK_SUBNET_$tier ($subnet)"
+        continue
+    fi
+    if [ "${iprange#*/}" -le "${subnet#*/}" ]; then
+        print_error "NETWORK_IPRANGE_$tier ($iprange) covers the whole subnet - no static zone left"
+        continue
+    fi
+    if in_cidr "${subnet%.*}.2" "$iprange"; then
+        print_error "NETWORK_IPRANGE_$tier ($iprange) contains ${subnet%.*}.2, reserved for Traefik"
+        continue
+    fi
+    print_success "$tier: subnet $subnet, dynamic pool $iprange, static zone = the rest"
 done
 
 # ============================================
@@ -182,13 +223,45 @@ if [ -f docker-compose.yml ]; then
         echo "  Run: docker-compose config"
     fi
 
-    # Check for hardcoded IPs that might conflict
-    if grep -q 'ipv4_address:' docker-compose.yml; then
-        print_warning "Hardcoded IP addresses found in docker-compose.yml"
-        grep 'ipv4_address:' docker-compose.yml | while read line; do
-            echo "    $line"
-        done
-    fi
+    # Static IPs are REQUIRED for Traefik (rule: every container on a traefik-*
+    # network declares ipv4_address in the static zone). Check each declared IP
+    # is inside its subnet and OUTSIDE the dynamic pool (ip-range).
+    check_static_ip() {
+        local netname=$1 ip=$2 tier subnet iprange
+        case "$netname" in
+            traefik-public)     tier=PUBLIC ;;
+            traefik-frontend)   tier=FRONTEND ;;
+            traefik-backend)    tier=BACKEND ;;
+            traefik-management) tier=MANAGEMENT ;;
+            *) print_warning "ipv4_address $ip on unknown network '$netname' - not checked"; return ;;
+        esac
+        subnet_var="NET_SUBNET_$tier"; iprange_var="NET_IPRANGE_$tier"
+        subnet="${!subnet_var}"; iprange="${!iprange_var}"
+        if ! in_cidr "$ip" "$subnet"; then
+            print_error "$netname: ipv4_address $ip is outside subnet $subnet"
+        elif in_cidr "$ip" "$iprange"; then
+            print_error "$netname: ipv4_address $ip falls inside the dynamic pool $iprange"
+            echo "  Static IPs must be in the static zone (outside ip-range), e.g. ${subnet%.*}.2-${subnet%.*}.127"
+        else
+            print_success "$netname: static IP $ip (static zone)"
+        fi
+    }
+
+    # Pair each 'traefik-xxx:' network key with the ipv4_address that follows it
+    FOUND_STATIC=""
+    while read -r netname ip; do
+        FOUND_STATIC="$FOUND_STATIC $netname"
+        check_static_ip "$netname" "$ip"
+    done < <(awk '
+        /^[[:space:]]+traefik-(public|frontend|backend|management):[[:space:]]*$/ { net=$1; sub(":","",net); next }
+        /ipv4_address:/ && net != "" { gsub(/"/,"",$2); print net, $2; net="" }
+    ' docker-compose.yml)
+
+    for required in traefik-public traefik-frontend traefik-management; do
+        if [[ " $FOUND_STATIC " != *" $required "* ]]; then
+            print_error "Traefik has no ipv4_address on $required (must be ${required}'s .2)"
+        fi
+    done
 else
     print_error "docker-compose.yml not found!"
 fi

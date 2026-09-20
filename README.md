@@ -1,6 +1,6 @@
 # 🚀 Traefik Template - Production-Ready Reverse Proxy
 
-A comprehensive, security-focused Traefik v3.5 template with automated setup, network segmentation, and best practices built-in.
+A comprehensive, security-focused Traefik v3.7 template with automated setup, network segmentation, and best practices built-in.
 
 ## ✨ Features
 
@@ -65,7 +65,8 @@ docker-compose logs -f
 │   └── configurations/    # Dynamic configs
 ├── scripts/               # Automation scripts
 │   ├── setup.sh          # Main setup script
-│   └── backup.sh        # Backup script
+│   ├── check-static-ips.sh # Audit: static IPs + ip-range on traefik-* networks
+│   └── backup-cert.sh   # Certificate backup
 ├── examples/           # Service examples
 │   ├── wordpress/     # WordPress setup
 │   ├── nextcloud/    # Nextcloud setup
@@ -114,12 +115,18 @@ openssl passwd -apr1 your_password
 
 The template implements a secure 4-tier network architecture:
 
-| Network | Subnet | Purpose |
-|---------|--------|---------|
-| traefik-public | 10.240.0.0/24 | External traffic entry |
-| traefik-frontend | 10.241.0.0/24 | Application services |
-| traefik-backend | 10.242.0.0/24 | Databases (isolated) |
-| traefik-management | 10.243.0.0/24 | Monitoring tools |
+| Network | Subnet | Purpose | Traefik | Static zone (`ipv4_address`) | Dynamic pool (`--ip-range`) |
+|---------|--------|---------|---------|------------------------------|-----------------------------|
+| traefik-public | 10.240.0.0/24 | External traffic entry | .2 | .3 – .127 | .128/25 |
+| traefik-frontend | 10.241.0.0/24 | Application services | .2 | .3 – .127 | .128/25 |
+| traefik-backend | 10.242.0.0/24 | Databases (isolated) | — | .2 – .127 | .128/25 |
+| traefik-management | 10.243.0.0/24 | Monitoring tools | .2 | .3 – .127 | .128/25 |
+
+**Rule**: every container on a `traefik-*` network declares `ipv4_address` from the
+static zone — `.2` is Traefik's. The networks are created with `--ip-range`, so a
+container that forgets the rule lands in `.128`+ and can never take Traefik's address
+(that exact failure took a host down for 36 h on 2026-09-19). Audit with
+`./scripts/check-static-ips.sh`. Details: [docs/NETWORK_SEGMENTATION.md](docs/NETWORK_SEGMENTATION.md#ip-allocation-static-zone-vs-dynamic-pool).
 
 **Note**: Uses 10.240.x.x range to avoid conflicts with cloud providers, VPNs, and Kubernetes.
 
@@ -308,7 +315,7 @@ MIT License - See LICENSE file
 
 ## 🏆 Credits
 
-Built with ❤️ using Traefik v3.5
+Built with ❤️ using Traefik v3.7
 
 ---
 

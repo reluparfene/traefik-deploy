@@ -221,8 +221,17 @@ for network_config in "${NETWORKS[@]}"; do
 
     if docker network inspect "$name" &>/dev/null 2>&1; then
         existing_subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$name" 2>/dev/null)
+        existing_iprange=$(docker network inspect -f '{{range .IPAM.Config}}{{.IPRange}}{{end}}' "$name" 2>/dev/null)
+        # Docker >= 29 renders an unset IPRange as "invalid Prefix" instead of ""
+        case "$existing_iprange" in ""|"invalid Prefix"|"<no value>"|"<nil>") existing_iprange="" ;; esac
         if [ "$existing_subnet" == "$subnet" ]; then
-            print_success "Network '$name' exists with correct subnet"
+            if [ -n "$existing_iprange" ]; then
+                print_success "Network '$name' exists with correct subnet (dynamic pool $existing_iprange)"
+            else
+                # setup.sh will refuse to continue; say why here already.
+                print_warning "Network '$name' exists WITHOUT ip-range - vulnerable to static/dynamic IP collision"
+                print_info "  Must be recreated with --ip-range (see docs/NETWORK_SEGMENTATION.md, 'Migrating existing networks')"
+            fi
         else
             print_warning "Network '$name' exists with different subnet: $existing_subnet"
         fi

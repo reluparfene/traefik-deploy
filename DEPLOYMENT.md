@@ -1,7 +1,7 @@
 # 🚀 Traefik Template - Deployment Guide
 
 ## Prezentare Generală
-Acest repository este un **template reutilizabil** pentru instalarea Traefik v3.5 pe servere multiple. Include scripturi de automatizare care validează și pregătesc mediul înainte de deployment.
+Acest repository este un **template reutilizabil** pentru instalarea Traefik v3.7 pe servere multiple. Include scripturi de automatizare care validează și pregătesc mediul înainte de deployment.
 
 ## ⚡ Quick Start
 
@@ -258,5 +258,5 @@ Pentru probleme:
 ---
 
 **Versiune Template:** 1.0.0
-**Traefik Version:** v3.5
+**Traefik Version:** v3.7.5
 **Ultima Actualizare:** 2024

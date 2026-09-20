@@ -278,12 +278,40 @@ create_network() {
     local name=$1
     local subnet=$2
     local internal=$3
+    local iprange=$4
+    local gateway="${subnet%.*}.1"
 
     # Check if network exists
     if docker network inspect "$name" &>/dev/null; then
         local existing_subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$name")
+        local existing_iprange=$(docker network inspect -f '{{range .IPAM.Config}}{{.IPRange}}{{end}}' "$name")
+        # Docker >= 29 renders an unset IPRange as "invalid Prefix" instead of ""
+        case "$existing_iprange" in ""|"invalid Prefix"|"<no value>"|"<nil>") existing_iprange="" ;; esac
         if [ "$existing_subnet" == "$subnet" ]; then
-            print_success "Network '$name' exists with correct subnet"
+            if [ "$existing_iprange" == "$iprange" ]; then
+                print_success "Network '$name' exists with correct subnet and ip-range"
+            else
+                # ip-range cannot be changed on an existing network: the network
+                # must be recreated. Without it, a container started WITHOUT a
+                # static IP can grab an address from the static zone (e.g.
+                # Traefik's .2) and Traefik then fails with "Address already in
+                # use" - see docs/NETWORK_SEGMENTATION.md, "IP allocation".
+                print_error "Network '$name' exists WITHOUT the expected ip-range!"
+                echo ""
+                echo "  Subnet:            $existing_subnet (ok)"
+                echo "  Current ip-range:  ${existing_iprange:-<none - whole subnet is dynamic>}"
+                echo "  Expected ip-range: $iprange"
+                echo ""
+                echo "  Docker cannot change ip-range in place. Migrate the network:"
+                echo "  1. Stop every stack attached to it (docker compose down in each)"
+                echo "  2. docker network rm $name"
+                echo "  3. Run setup.sh again (recreates it with --ip-range)"
+                echo "  4. Start the stacks again (docker compose up -d)"
+                echo "  See docs/NETWORK_SEGMENTATION.md -> 'Migrating existing networks'"
+                echo ""
+                print_error "Setup aborted due to missing ip-range!"
+                exit 1
+            fi
         else
             print_error "CONFLICT: Network '$name' already exists with different subnet!"
             echo ""
@@ -327,15 +355,17 @@ create_network() {
         exit 1
     fi
 
-    # Create network
-    local cmd="docker network create --driver=bridge --subnet=$subnet"
+    # Create network. --ip-range confines dynamic allocation to the upper half
+    # of the subnet; the lower half (.2-.127) is reserved for explicit
+    # ipv4_address assignments (Traefik = .2). See docs/NETWORK_SEGMENTATION.md.
+    local cmd="docker network create --driver=bridge --subnet=$subnet --gateway=$gateway --ip-range=$iprange"
     if [ "$internal" == "true" ]; then
         cmd="$cmd --internal"
     fi
     cmd="$cmd $name"
 
     if $cmd; then
-        print_success "Created network: $name ($subnet) $([ "$internal" == "true" ] && echo "[INTERNAL]")"
+        print_success "Created network: $name ($subnet, dynamic pool $iprange) $([ "$internal" == "true" ] && echo "[INTERNAL]")"
     else
         print_error "Failed to create network: $name"
         echo ""
@@ -344,7 +374,7 @@ create_network() {
         echo "  - Permission problems"
         echo "  - Invalid subnet format"
         echo ""
-        echo "  Try running: docker network create --subnet=$subnet $name"
+        echo "  Try running: docker network create --subnet=$subnet --gateway=$gateway --ip-range=$iprange $name"
         echo ""
         print_error "Setup aborted due to network creation failure!"
         exit 1
@@ -353,10 +383,11 @@ create_network() {
 
 # Create networks with clear traefik- prefix
 # Using 10.240.x.x range to minimize conflicts with cloud providers, VPNs, and K8s
-create_network "traefik-public" "${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}" "false"
-create_network "traefik-frontend" "${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}" "false"
-create_network "traefik-backend" "${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}" "true"
-create_network "traefik-management" "${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}" "true"
+# Each network: subnet, internal?, dynamic pool (ip-range). Static zone = the rest.
+create_network "traefik-public"     "${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}"     "false" "${NETWORK_IPRANGE_PUBLIC:-10.240.0.128/25}"
+create_network "traefik-frontend"   "${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}"   "false" "${NETWORK_IPRANGE_FRONTEND:-10.241.0.128/25}"
+create_network "traefik-backend"    "${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}"    "true"  "${NETWORK_IPRANGE_BACKEND:-10.242.0.128/25}"
+create_network "traefik-management" "${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}" "true"  "${NETWORK_IPRANGE_MANAGEMENT:-10.243.0.128/25}"
 
 # ============================================
 # STEP 4: Setup Traefik configuration

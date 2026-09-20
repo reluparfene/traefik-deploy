@@ -105,13 +105,24 @@ create_or_validate_network() {
     local gateway=$3
     local internal=$4
     local description=$5
+    local iprange=$6
 
     # Check if network already exists
     if docker network inspect "$name" >/dev/null 2>&1; then
         local existing_subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$name")
+        local existing_iprange=$(docker network inspect -f '{{range .IPAM.Config}}{{.IPRange}}{{end}}' "$name")
+        # Docker >= 29 renders an unset IPRange as "invalid Prefix" instead of ""
+        case "$existing_iprange" in ""|"invalid Prefix"|"<no value>"|"<nil>") existing_iprange="" ;; esac
 
         if [ "$existing_subnet" == "$desired_subnet" ]; then
-            print_success "Network '$name' exists with correct subnet ($existing_subnet)"
+            if [ "$existing_iprange" == "$iprange" ]; then
+                print_success "Network '$name' exists with correct subnet ($existing_subnet) and ip-range ($existing_iprange)"
+            else
+                print_warning "Network '$name' exists with subnet $existing_subnet but ip-range '${existing_iprange:-<none>}' (expected $iprange)"
+                echo "  Without ip-range a container without static IP can take Traefik's address at boot."
+                echo "  ip-range cannot be changed in place - recreate the network:"
+                echo "  docker compose down (every stack on it) && docker network rm $name && re-run this script"
+            fi
         else
             print_warning "Network '$name' exists with different subnet ($existing_subnet)"
             print_warning "Expected: $desired_subnet"
@@ -138,8 +149,9 @@ create_or_validate_network() {
         fi
     fi
 
-    # Create the network
-    local cmd="docker network create --driver=bridge --subnet=$desired_subnet --gateway=$gateway"
+    # Create the network. --ip-range = dynamic pool; the rest of the subnet is
+    # the static zone for explicit ipv4_address (Traefik = .2).
+    local cmd="docker network create --driver=bridge --subnet=$desired_subnet --gateway=$gateway --ip-range=$iprange"
 
     if [ "$internal" == "true" ]; then
         cmd="$cmd --internal"
@@ -149,9 +161,9 @@ create_or_validate_network() {
 
     if eval $cmd; then
         if [ "$internal" == "true" ]; then
-            print_success "Created INTERNAL network: $name ($desired_subnet)"
+            print_success "Created INTERNAL network: $name ($desired_subnet, dynamic pool $iprange)"
         else
-            print_success "Created network: $name ($desired_subnet)"
+            print_success "Created network: $name ($desired_subnet, dynamic pool $iprange)"
         fi
     else
         print_error "Failed to create network: $name"
@@ -199,22 +211,24 @@ if [ -f .env ]; then
     print_warning "Found .env file - using network configuration from .env"
     echo "  If network subnets in .env are outdated, they will be used instead of defaults!"
     echo "  Default subnets: 10.240.0.0/24, 10.241.0.0/24, 10.242.0.0/24, 10.243.0.0/24"
+    echo "  Default dynamic pools (ip-range): x.x.x.128/25 of each subnet"
     echo ""
 fi
 
 # Define networks with defaults
 # Using 10.240.x.x range to minimize conflicts with cloud providers, VPNs, and K8s
+# Format: name:subnet:internal:description:ip-range (dynamic pool)
 NETWORKS=(
-    "traefik-public:${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}:false:DMZ/Edge network for Traefik"
-    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}:false:Frontend applications"
-    "traefik-backend:${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}:true:Database backend (isolated)"
-    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}:true:Management and monitoring"
+    "traefik-public:${NETWORK_SUBNET_PUBLIC:-10.240.0.0/24}:false:DMZ/Edge network for Traefik:${NETWORK_IPRANGE_PUBLIC:-10.240.0.128/25}"
+    "traefik-frontend:${NETWORK_SUBNET_FRONTEND:-10.241.0.0/24}:false:Frontend applications:${NETWORK_IPRANGE_FRONTEND:-10.241.0.128/25}"
+    "traefik-backend:${NETWORK_SUBNET_BACKEND:-10.242.0.0/24}:true:Database backend (isolated):${NETWORK_IPRANGE_BACKEND:-10.242.0.128/25}"
+    "traefik-management:${NETWORK_SUBNET_MANAGEMENT:-10.243.0.0/24}:true:Management and monitoring:${NETWORK_IPRANGE_MANAGEMENT:-10.243.0.128/25}"
 )
 
-echo "Planned networks:"
+echo "Planned networks (static zone = subnet minus dynamic pool):"
 for network_config in "${NETWORKS[@]}"; do
-    IFS=':' read -r name subnet internal description <<< "$network_config"
-    echo "  - $name: $subnet $([ "$internal" == "true" ] && echo "[INTERNAL]")"
+    IFS=':' read -r name subnet internal description iprange <<< "$network_config"
+    echo "  - $name: $subnet  dynamic pool $iprange $([ "$internal" == "true" ] && echo "[INTERNAL]")"
 done
 
 # Step 4: Create networks
@@ -222,10 +236,10 @@ print_header "Creating Networks"
 
 FAILED=0
 for network_config in "${NETWORKS[@]}"; do
-    IFS=':' read -r name subnet internal description <<< "$network_config"
+    IFS=':' read -r name subnet internal description iprange <<< "$network_config"
     gateway="${subnet%.*}.1"
 
-    if ! create_or_validate_network "$name" "$subnet" "$gateway" "$internal" "$description"; then
+    if ! create_or_validate_network "$name" "$subnet" "$gateway" "$internal" "$description" "$iprange"; then
         FAILED=$((FAILED + 1))
     fi
 done

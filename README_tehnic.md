@@ -38,7 +38,7 @@ Repository-ul este construit pe principiile:
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
-│         Traefik v3.5                │
+│         Traefik v3.7                │
 │  (Reverse Proxy & Load Balancer)    │
 └──────────────┬──────────────────────┘
                │
@@ -162,7 +162,7 @@ data/
 ```yaml
 services:
   traefik:
-    image: traefik:v3.5
+    image: traefik:v3.7.5
     container_name: traefik-proxy
     restart: unless-stopped
     security_opt:
@@ -185,13 +185,13 @@ services:
       - ./data/traefik.yml:/traefik.yml:ro           # Static config
       - ./data/acme.json:/acme.json                  # Certificates
       - ./data/configurations:/configurations         # Dynamic configs
-    networks:
-      traefik-public:
-        ipv4_address: "10.240.0.2"    # Fixed IP in DMZ
-      traefik-frontend:
-        ipv4_address: "10.241.0.2"    # Fixed IP in frontend
+    networks:                         # .2 reserved for Traefik on every network;
+      traefik-public:                 # dynamic pool starts at .128 (--ip-range),
+        ipv4_address: "10.240.0.2"    # so no other container can take .2.
+      traefik-frontend:               # Every other container: ipv4_address in .3-.127
+        ipv4_address: "10.241.0.2"    # (docs/NETWORK_SEGMENTATION.md, "IP allocation")
       traefik-management:
-        ipv4_address: "10.243.0.2"    # Fixed IP in management
+        ipv4_address: "10.243.0.2"
 ```
 
 ### **2. Template System**

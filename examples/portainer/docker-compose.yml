@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   portainer:
     image: portainer/portainer-ce:latest
@@ -10,9 +8,13 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - portainer_data:/data
+    # Static IPs are mandatory on traefik-* networks (static zone .3-.127;
+    # .2 = Traefik). Pick unused addresses - see docs/NETWORK_SEGMENTATION.md.
     networks:
-      - traefik-frontend
-      - traefik-management
+      traefik-frontend:
+        ipv4_address: "10.241.0.30"
+      traefik-management:
+        ipv4_address: "10.243.0.30"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-frontend"
@@ -43,7 +45,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/volumes:/var/lib/docker/volumes
     networks:
-      - traefik-management
+      traefik-management:
+        ipv4_address: "10.243.0.31"
     ports:
       - "9001:9001"
 

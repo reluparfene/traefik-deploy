@@ -41,9 +41,14 @@ Access at: `https://portainer.yourdomain.com`
 ## Network Configuration
 
 All examples follow the network segmentation pattern:
-- **app-frontend**: For web-facing services
-- **db-backend**: For databases (isolated)
-- **management**: For admin tools
+- **traefik-frontend**: For web-facing services
+- **traefik-backend**: For databases (isolated)
+- **traefik-management**: For admin tools
+
+**Every service has a static IP** (`ipv4_address`) from the static zone `.3`–`.127`
+of its network — `.2` is Traefik's. The examples use `.10`/`.11` (WordPress),
+`.20`–`.22` (Nextcloud) and `.30`/`.31` (Portainer); change them to free addresses on
+your host and record them. Why this is mandatory: [docs/NETWORK_SEGMENTATION.md](../docs/NETWORK_SEGMENTATION.md#ip-allocation-static-zone-vs-dynamic-pool).
 
 ## Adding Custom Services
 
@@ -53,25 +58,29 @@ Use these examples as templates. Key requirements:
 ```yaml
 labels:
   - "traefik.enable=true"
-  - "traefik.docker.network=app-frontend"
+  - "traefik.docker.network=traefik-frontend"
   - "traefik.http.routers.[name].rule=Host(`subdomain.${DOMAIN}`)"
 ```
 
-2. Connect to appropriate networks:
+2. Connect to the appropriate networks **with a static IP on each**:
 ```yaml
 networks:
-  - app-frontend  # For web access
-  - db-backend    # For database access (if needed)
+  traefik-frontend:
+    ipv4_address: "10.241.0.40"   # For web access - free address in .3-.127
+  traefik-backend:
+    ipv4_address: "10.242.0.40"   # For database access (if needed)
 ```
 
 3. Use external networks:
 ```yaml
 networks:
-  app-frontend:
+  traefik-frontend:
     external: true
-  db-backend:
+  traefik-backend:
     external: true
 ```
+
+4. Verify: `../../scripts/check-static-ips.sh` must exit 0.
 
 ## Security Notes
 

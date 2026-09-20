@@ -122,8 +122,17 @@ for network_config in "${NETWORKS[@]}"; do
     # Check if network already exists
     if docker network inspect "$name" &>/dev/null; then
         existing_subnet=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$name")
+        existing_iprange=$(docker network inspect -f '{{range .IPAM.Config}}{{.IPRange}}{{end}}' "$name")
+        # Docker >= 29 renders an unset IPRange as "invalid Prefix" instead of ""
+        case "$existing_iprange" in ""|"invalid Prefix"|"<no value>"|"<nil>") existing_iprange="" ;; esac
         if [ "$existing_subnet" == "$subnet" ]; then
             print_success "$name exists with correct subnet: $subnet"
+            if [ -z "$existing_iprange" ]; then
+                print_warning "  $name has NO ip-range: the whole subnet is dynamic -> a container without"
+                echo "  static IP can take Traefik's .2 at boot. Recreate it with --ip-range (setup.sh)."
+            else
+                echo "  dynamic pool (ip-range): $existing_iprange"
+            fi
             SUGGESTIONS+=("${network_config}")
         else
             print_warning "$name exists with different subnet: $existing_subnet (expected: $subnet)"

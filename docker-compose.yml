@@ -31,6 +31,11 @@ services:
       # Add folder with dynamic configuration yml
       - ./data/configurations:/configurations
       - ./traefik.log:/traefik.log
+    # .2 on every network is reserved for Traefik. Networks are created with
+    # --ip-range .128/25 (setup.sh), so containers WITHOUT ipv4_address land in
+    # .128-.254 and can never take these addresses. Rule for every other
+    # container on a traefik-* network: declare ipv4_address in .3-.127.
+    # See docs/NETWORK_SEGMENTATION.md, "IP allocation".
     networks:
       # Public network - for external traffic
       traefik-public:

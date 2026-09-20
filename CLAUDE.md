@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-This is a production-ready Traefik v3.5 template repository with automated setup, network segmentation, and security best practices. It is designed exclusively as a reusable template for new Traefik installations, not as a working deployment.
+This is a production-ready Traefik v3.7 template repository with automated setup, network segmentation, and security best practices. It is designed exclusively as a reusable template for new Traefik installations, not as a working deployment.
 
 ## Key Architecture
 
@@ -23,6 +23,15 @@ This is a production-ready Traefik v3.5 template repository with automated setup
 - **traefik-management** (10.243.0.0/24) - Monitoring and admin tools (internal only)
 
 **Note**: Using 10.240.x.x range to minimize conflicts with cloud providers (AWS, Azure, GCP), VPN services, and Kubernetes clusters.
+
+**IP allocation rule (mandatory)**: every container attached to a `traefik-*` network
+declares `ipv4_address` from the static zone `.3`–`.127`; `.2` is reserved for Traefik.
+Networks are created with `--ip-range .128/25` (`NETWORK_IPRANGE_*` in `.env`) so a
+container without a static IP lands in `.128`+ and can never take Traefik's address —
+the safety net, not a substitute for the rule. When adding a service, pick a free
+address from the static zone and record it in the host's allocation table. Never
+create a `traefik-*` network without `--ip-range`. Audit: `./scripts/check-static-ips.sh`.
+Background: `docs/NETWORK_SEGMENTATION.md` → "IP allocation" (incident 2026-09-19).
 
 ### Security Features
 - Rate limiting middleware (100 req avg, 50 burst)
@@ -59,6 +68,9 @@ nano .env  # Edit with your actual values
 
 # Check network status
 docker network ls | grep -E "traefik|frontend|backend|management"
+
+# Audit static IPs + ip-range on every traefik-* network (exit 0 = clean)
+./scripts/check-static-ips.sh
 ```
 
 ### Service Management
@@ -241,7 +253,7 @@ This repository is a template only - it requires configuration before use:
 
 ## Version Information
 
-- **Current Traefik Version**: v3.5
+- **Current Traefik Version**: v3.7.5
 - **Minimum Docker Version**: 20.10.0
 - **Docker Compose Version**: v2 recommended
 - **Tested on**: Ubuntu 22.04, Debian 11/12

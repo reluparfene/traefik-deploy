@@ -2,7 +2,7 @@
 
 ## 📌 Ce este acest repository?
 
-Acesta este un **sistem complet de reverse proxy** bazat pe **Traefik v3.5** care oferă:
+Acesta este un **sistem complet de reverse proxy** bazat pe **Traefik v3.7** care oferă:
 - ✅ **HTTPS automat** cu certificate Let's Encrypt gratuite
 - ✅ **Routing inteligent** pentru mai multe aplicații pe același server
 - ✅ **Securitate avansată** cu rate limiting, security headers și network isolation

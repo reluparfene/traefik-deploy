@@ -36,7 +36,8 @@ setup-networks-safe.sh (Alternative Network Creation)
 - Creates symlink if existing config found
 - Validates system requirements via `preflight-check.sh`
 - Validates configuration via `validate-config.sh`
-- Creates Docker networks automatically
+- Creates Docker networks automatically (with `--ip-range`; aborts if an existing
+  network has no ip-range — see `NETWORK_SEGMENTATION.md`, "Migrating existing networks")
 - Processes templates with envsubst
 - Sets proper permissions (acme.json = 600)
 - Starts Traefik container
@@ -188,6 +189,7 @@ setup-networks-safe.sh (Alternative Network Creation)
 - Network name conflicts
 - Subnet conflicts
 - IP range availability
+- Missing `--ip-range` on existing `traefik-*` networks (warning)
 - Existing containers on networks
 
 **Exit Codes**:
@@ -219,6 +221,35 @@ setup-networks-safe.sh (Alternative Network Creation)
 - `traefik-management` (10.243.0.0/24 or fallback, internal)
 
 **Note**: Network creation is normally handled by `setup.sh`. This script provides an alternative for complex scenarios.
+
+---
+
+### **check-static-ips.sh**
+**Purpose**: Audit the live `traefik-*` networks against the IP allocation rule
+(every container on a static IP in the static zone; every network with an `--ip-range`;
+Traefik on `.2`)
+
+**Location**: `/scripts/check-static-ips.sh`
+
+**Usage**:
+```bash
+./scripts/check-static-ips.sh
+TRAEFIK_CONTAINER=my-traefik ./scripts/check-static-ips.sh   # if the container is not named traefik-proxy
+```
+
+**Reports, per network and container**:
+- ✅ IP in the static zone
+- ⚠️ IP inside the dynamic pool → the container has no `ipv4_address` (rule violation)
+- ❌ network without `ip-range` (whole subnet dynamic - Traefik's `.2` unprotected)
+- ❌ Traefik missing from `traefik-public`/`frontend`/`management`, or not on `.2`
+
+**Exit Codes**:
+- `0` - Clean
+- `1` - Rule violations (warnings) only
+- `2` - Errors
+
+**When to run**: after adding a service, after a reboot, or daily from cron.
+Read-only — never changes anything.
 
 ---
 
